@@ -305,19 +305,11 @@ var Tests = []test.SpecInterface{
 			is missing one of the hashes.
 			`,
 		},
-
-		// We fork on genesis
-		BlobsForkHeight: 0,
-
 		BlobTestSequence: BlobTestSequence{
-			// First, we send a couple of blob transactions on genesis,
-			// with enough data gas cost to make sure they are included in the first block.
 			SendBlobTransactions{
 				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
-
-			// We create a mock new payload with one of the hashes missing.
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
@@ -336,19 +328,13 @@ var Tests = []test.SpecInterface{
 			is has an extra hash for a blob that is not in the payload.
 			`,
 		},
-
-		// We fork on genesis
-		BlobsForkHeight: 0,
-
+		// TODO: It could be worth it to also test this with a blob that is in the
+		// mempool but was not included in the payload.
 		BlobTestSequence: BlobTestSequence{
-			// First, we send a couple of blob transactions on genesis,
-			// with enough data gas cost to make sure they are included in the first block.
 			SendBlobTransactions{
 				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
-
-			// We create a mock new payload with one of the hashes missing.
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
@@ -367,19 +353,11 @@ var Tests = []test.SpecInterface{
 			is out of order.
 			`,
 		},
-
-		// We fork on genesis
-		BlobsForkHeight: 0,
-
 		BlobTestSequence: BlobTestSequence{
-			// First, we send a couple of blob transactions on genesis,
-			// with enough data gas cost to make sure they are included in the first block.
 			SendBlobTransactions{
 				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
-
-			// We create a mock new payload with one of the hashes missing.
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
@@ -398,19 +376,11 @@ var Tests = []test.SpecInterface{
 			has a blob that is repeated in the array.
 			`,
 		},
-
-		// We fork on genesis
-		BlobsForkHeight: 0,
-
 		BlobTestSequence: BlobTestSequence{
-			// First, we send a couple of blob transactions on genesis,
-			// with enough data gas cost to make sure they are included in the first block.
 			SendBlobTransactions{
 				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
-
-			// We create a mock new payload with one of the hashes missing.
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
@@ -429,20 +399,11 @@ var Tests = []test.SpecInterface{
 			has a blob that is repeated in the array.
 			`,
 		},
-		// TODO: It could be worth it to test this where the blob is indeed in
-		//  the mempool, but it was not included in the payload.
-		// We fork on genesis
-		BlobsForkHeight: 0,
-
 		BlobTestSequence: BlobTestSequence{
-			// First, we send a couple of blob transactions on genesis,
-			// with enough data gas cost to make sure they are included in the first block.
 			SendBlobTransactions{
 				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
-
-			// We create a mock new payload with one of the hashes missing.
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
@@ -460,20 +421,11 @@ var Tests = []test.SpecInterface{
 			has a single blob that has an incorrect version.
 			`,
 		},
-		// TODO: It could be worth it to test this where the blob is indeed in
-		//  the mempool, but it was not included in the payload.
-		// We fork on genesis
-		BlobsForkHeight: 0,
-
 		BlobTestSequence: BlobTestSequence{
-			// First, we send a couple of blob transactions on genesis,
-			// with enough data gas cost to make sure they are included in the first block.
 			SendBlobTransactions{
 				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
-
-			// We create a mock new payload with one of the hashes missing.
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
@@ -493,20 +445,11 @@ var Tests = []test.SpecInterface{
 			is nil, even though the fork has already happened.
 			`,
 		},
-		// TODO: It could be worth it to test this where the blob is indeed in
-		//  the mempool, but it was not included in the payload.
-		// We fork on genesis
-		BlobsForkHeight: 0,
-
 		BlobTestSequence: BlobTestSequence{
-			// First, we send a couple of blob transactions on genesis,
-			// with enough data gas cost to make sure they are included in the first block.
 			SendBlobTransactions{
 				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
-
-			// We create a mock new payload with one of the hashes missing.
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
@@ -525,20 +468,11 @@ var Tests = []test.SpecInterface{
 			is empty, even though there are blobs in the payload.
 			`,
 		},
-		// TODO: It could be worth it to test this where the blob is indeed in
-		//  the mempool, but it was not included in the payload.
-		// We fork on genesis
-		BlobsForkHeight: 0,
-
 		BlobTestSequence: BlobTestSequence{
-			// First, we send a couple of blob transactions on genesis,
-			// with enough data gas cost to make sure they are included in the first block.
 			SendBlobTransactions{
 				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
-
-			// We create a mock new payload with one of the hashes missing.
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
@@ -557,19 +491,318 @@ var Tests = []test.SpecInterface{
 			is contains hashes, even though there are no blobs in the payload.
 			`,
 		},
-		// TODO: It could be worth it to test this where the blob is indeed in
-		//  the mempool, but it was not included in the payload.
-		// We fork on genesis
-		BlobsForkHeight: 0,
-
 		BlobTestSequence: BlobTestSequence{
-			// We create a mock new payload with one of the hashes missing.
 			NewPayloads{
 				ExpectedIncludedBlobCount: 0,
 				ExpectedBlobs:             []helper.BlobID{},
 				VersionedHashesModification: &VersionedHashesModification{
 					VersionedHashesBlobs: []helper.BlobID{0, 1},
 				},
+			},
+		},
+	},
+
+	// Test versioned hashes in Engine API NewPayloadV3 on syncing clients
+	&BlobsBaseSpec{
+
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Missing Hash (Syncing)",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is missing one of the hashes.
+			`,
+		},
+		BlobTestSequence: BlobTestSequence{
+			NewPayloads{}, // Send new payload so the parent is unknown to the secondary client
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+			},
+
+			LaunchClients{
+				EngineStarter:            hive_rpc.HiveRPCEngineStarter{},
+				SkipAddingToCLMock:       true,
+				SkipConnectingToBootnode: true, // So the client is in a perpetual syncing state
+			},
+			SendModifiedLatestPayload{
+				ClientID: 1,
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0},
+				},
+				ExpectedStatus: test.Invalid,
+			},
+		},
+	},
+	&BlobsBaseSpec{
+
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Extra Hash (Syncing)",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is has an extra hash for a blob that is not in the payload.
+			`,
+		},
+		// TODO: It could be worth it to also test this with a blob that is in the
+		// mempool but was not included in the payload.
+		BlobTestSequence: BlobTestSequence{
+			NewPayloads{}, // Send new payload so the parent is unknown to the secondary client
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+			},
+
+			LaunchClients{
+				EngineStarter:            hive_rpc.HiveRPCEngineStarter{},
+				SkipAddingToCLMock:       true,
+				SkipConnectingToBootnode: true, // So the client is in a perpetual syncing state
+			},
+			SendModifiedLatestPayload{
+				ClientID: 1,
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0, 1, 2},
+				},
+				ExpectedStatus: test.Invalid,
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Out of Order (Syncing)",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is out of order.
+			`,
+		},
+		BlobTestSequence: BlobTestSequence{
+			NewPayloads{}, // Send new payload so the parent is unknown to the secondary client
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+			},
+			LaunchClients{
+				EngineStarter:            hive_rpc.HiveRPCEngineStarter{},
+				SkipAddingToCLMock:       true,
+				SkipConnectingToBootnode: true, // So the client is in a perpetual syncing state
+			},
+			SendModifiedLatestPayload{
+				ClientID: 1,
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{1, 0},
+				},
+				ExpectedStatus: test.Invalid,
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Repeated Hash (Syncing)",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			has a blob that is repeated in the array.
+			`,
+		},
+		BlobTestSequence: BlobTestSequence{
+			NewPayloads{}, // Send new payload so the parent is unknown to the secondary client
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+			},
+
+			LaunchClients{
+				EngineStarter:            hive_rpc.HiveRPCEngineStarter{},
+				SkipAddingToCLMock:       true,
+				SkipConnectingToBootnode: true, // So the client is in a perpetual syncing state
+			},
+			SendModifiedLatestPayload{
+				ClientID: 1,
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0, 1, 1},
+				},
+				ExpectedStatus: test.Invalid,
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Incorrect Hash (Syncing)",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			has a blob that is repeated in the array.
+			`,
+		},
+		BlobTestSequence: BlobTestSequence{
+			NewPayloads{}, // Send new payload so the parent is unknown to the secondary client
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+			},
+
+			LaunchClients{
+				EngineStarter:            hive_rpc.HiveRPCEngineStarter{},
+				SkipAddingToCLMock:       true,
+				SkipConnectingToBootnode: true, // So the client is in a perpetual syncing state
+			},
+			SendModifiedLatestPayload{
+				ClientID: 1,
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0, 2},
+				},
+				ExpectedStatus: test.Invalid,
+			},
+		},
+	},
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Incorrect Version (Syncing)",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			has a single blob that has an incorrect version.
+			`,
+		},
+		BlobTestSequence: BlobTestSequence{
+			NewPayloads{}, // Send new payload so the parent is unknown to the secondary client
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+			},
+
+			LaunchClients{
+				EngineStarter:            hive_rpc.HiveRPCEngineStarter{},
+				SkipAddingToCLMock:       true,
+				SkipConnectingToBootnode: true, // So the client is in a perpetual syncing state
+			},
+			SendModifiedLatestPayload{
+				ClientID: 1,
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0, 1},
+					HashVersions:         []byte{BLOB_COMMITMENT_VERSION_KZG, BLOB_COMMITMENT_VERSION_KZG + 1},
+				},
+				ExpectedStatus: test.Invalid,
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Nil Hashes (Syncing)",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is nil, even though the fork has already happened.
+			`,
+		},
+		BlobTestSequence: BlobTestSequence{
+			NewPayloads{}, // Send new payload so the parent is unknown to the secondary client
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+			},
+
+			LaunchClients{
+				EngineStarter:            hive_rpc.HiveRPCEngineStarter{},
+				SkipAddingToCLMock:       true,
+				SkipConnectingToBootnode: true, // So the client is in a perpetual syncing state
+			},
+			SendModifiedLatestPayload{
+				ClientID: 1,
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: nil,
+				},
+				ExpectedStatus: test.Invalid,
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Empty Hashes (Syncing)",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is empty, even though there are blobs in the payload.
+			`,
+		},
+		BlobTestSequence: BlobTestSequence{
+			NewPayloads{}, // Send new payload so the parent is unknown to the secondary client
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+			},
+
+			LaunchClients{
+				EngineStarter:            hive_rpc.HiveRPCEngineStarter{},
+				SkipAddingToCLMock:       true,
+				SkipConnectingToBootnode: true, // So the client is in a perpetual syncing state
+			},
+			SendModifiedLatestPayload{
+				ClientID: 1,
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{},
+				},
+				ExpectedStatus: test.Invalid,
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Non-Empty Hashes (Syncing)",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is contains hashes, even though there are no blobs in the payload.
+			`,
+		},
+		BlobTestSequence: BlobTestSequence{
+			NewPayloads{}, // Send new payload so the parent is unknown to the secondary client
+			NewPayloads{
+				ExpectedIncludedBlobCount: 0,
+				ExpectedBlobs:             []helper.BlobID{},
+			},
+
+			LaunchClients{
+				EngineStarter:            hive_rpc.HiveRPCEngineStarter{},
+				SkipAddingToCLMock:       true,
+				SkipConnectingToBootnode: true, // So the client is in a perpetual syncing state
+			},
+			SendModifiedLatestPayload{
+				ClientID: 1,
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0, 1},
+				},
+				ExpectedStatus: test.Invalid,
 			},
 		},
 	},

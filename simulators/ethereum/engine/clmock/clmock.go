@@ -415,6 +415,7 @@ func (cl *CLMocker) broadcastNextNewPayload() {
 	}
 	// Broadcast the executePayload to all clients
 	responses := cl.BroadcastNewPayload(&cl.LatestPayloadBuilt, versionedHashes)
+	acceptedPayloads := 0
 	for _, resp := range responses {
 		if resp.Error != nil {
 			cl.Logf("CLMocker: BroadcastNewPayload Error (%v): %v\n", resp.Container, resp.Error)
@@ -429,6 +430,7 @@ func (cl *CLMocker) broadcastNextNewPayload() {
 				if *resp.ExecutePayloadResponse.LatestValidHash != cl.LatestPayloadBuilt.BlockHash {
 					cl.Fatalf("CLMocker: NewPayload returned VALID status with incorrect LatestValidHash==%v, expected %v", resp.ExecutePayloadResponse.LatestValidHash, cl.LatestPayloadBuilt.BlockHash)
 				}
+				acceptedPayloads += 1
 			} else if resp.ExecutePayloadResponse.Status == api.ACCEPTED {
 				// The client is not synced but the payload was accepted
 				// https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md:
@@ -443,6 +445,9 @@ func (cl *CLMocker) broadcastNextNewPayload() {
 				cl.Logf("CLMocker: BroadcastNewPayload Response (%v): %v\n", resp.Container, resp.ExecutePayloadResponse)
 			}
 		}
+	}
+	if acceptedPayloads == 0 {
+		cl.Fatalf("CLMocker: No clients accepted the payload")
 	}
 	cl.LatestExecutedPayload = cl.LatestPayloadBuilt
 	payload := cl.LatestPayloadBuilt

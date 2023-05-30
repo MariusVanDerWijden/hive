@@ -91,6 +91,7 @@ func (step LaunchClients) Execute(t *BlobTestContext) error {
 			return err
 		}
 		t.Engines = append(t.Engines, client)
+		t.TestEngines = append(t.TestEngines, test.NewTestEngineClient(t.Env, client))
 		if !step.SkipAddingToCLMock {
 			t.CLMock.AddEngineClient(client)
 		}
@@ -152,6 +153,18 @@ func (v *VersionedHashesModification) VersionedHashes() ([]common.Hash, error) {
 	}
 
 	return versionedHashes, nil
+}
+
+func (v *VersionedHashesModification) Description() string {
+	desc := "VersionedHashesModification: "
+	if v.VersionedHashesBlobs != nil {
+		desc += fmt.Sprintf("%v", v.VersionedHashesBlobs)
+	}
+	if v.HashVersions != nil {
+		desc += fmt.Sprintf(" with versions %v", v.HashVersions)
+	}
+	return desc
+
 }
 
 func (step NewPayloads) GetPayloadCount() uint64 {
@@ -317,6 +330,9 @@ func (step NewPayloads) Execute(t *BlobTestContext) error {
 }
 
 func (step NewPayloads) Description() string {
+	if step.VersionedHashesModification != nil {
+		return fmt.Sprintf("NewPayloads: %d payloads, %d blobs expected, %s", step.GetPayloadCount(), step.ExpectedIncludedBlobCount, step.VersionedHashesModification.Description())
+	}
 	return fmt.Sprintf("NewPayloads: %d payloads, %d blobs expected", step.GetPayloadCount(), step.ExpectedIncludedBlobCount)
 }
 
@@ -401,4 +417,43 @@ func (step SendBlobTransactions) Execute(t *BlobTestContext) error {
 
 func (step SendBlobTransactions) Description() string {
 	return fmt.Sprintf("SendBlobTransactions: %d Transactions, %d blobs each, %d max data gas fee", step.BlobTransactionSendCount, step.GetBlobsPerTransaction(), step.BlobTransactionMaxDataGasCost.Uint64())
+}
+
+// Send a modified version of the latest payload produced using NewPayloadV3
+type SendModifiedLatestPayload struct {
+	ClientID uint64
+	// Versioned hashes modification
+	VersionedHashesModification *VersionedHashesModification
+	// Expected status of the new payload request
+	ExpectedStatus test.PayloadStatus
+}
+
+func (step SendModifiedLatestPayload) Execute(t *BlobTestContext) error {
+	// Get the latest payload
+	payload := &t.CLMock.LatestPayloadBuilt
+	if payload == nil {
+		return fmt.Errorf("no payload available")
+	}
+	// Modify the versioned hashes
+	versionedHashes, err := step.VersionedHashesModification.VersionedHashes()
+	if err != nil {
+		return fmt.Errorf("error getting modified versioned hashes: %v", err)
+	}
+	// Send the payload
+	if step.ClientID >= uint64(len(t.TestEngines)) {
+		return fmt.Errorf("invalid client index %d", step.ClientID)
+	}
+	testEngine := t.TestEngines[step.ClientID]
+	r := testEngine.TestEngineNewPayloadV3(payload, versionedHashes)
+	r.ExpectStatus(step.ExpectedStatus)
+	return nil
+}
+
+func (step SendModifiedLatestPayload) Description() string {
+	desc := fmt.Sprintf("SendModifiedLatestPayload: client %d, expected status %s, ", step.ClientID, step.ExpectedStatus)
+	if step.VersionedHashesModification != nil {
+		desc += step.VersionedHashesModification.Description()
+	}
+
+	return desc
 }
