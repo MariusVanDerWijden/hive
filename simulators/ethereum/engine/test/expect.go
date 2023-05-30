@@ -251,6 +251,23 @@ func (tec *TestEngineClient) TestEngineNewPayloadV2(payload *api.ExecutableData)
 	return ret
 }
 
+func (tec *TestEngineClient) TestEngineNewPayloadV3(payload *api.ExecutableData, versionedHashes []common.Hash) *NewPayloadResponseExpectObject {
+	ctx, cancel := context.WithTimeout(tec.TestContext, globals.RPCTimeout)
+	defer cancel()
+	status, err := tec.Engine.NewPayloadV3(ctx, payload, versionedHashes)
+	ret := &NewPayloadResponseExpectObject{
+		ExpectEnv: &ExpectEnv{Env: tec.Env},
+		Payload:   payload,
+		Status:    status,
+		Version:   3,
+		Error:     err,
+	}
+	if err, ok := err.(rpc.Error); ok {
+		ret.ErrorCode = err.ErrorCode()
+	}
+	return ret
+}
+
 func (tec *TestEngineClient) TestEngineNewPayload(payload *api.ExecutableData, version int) *NewPayloadResponseExpectObject {
 	if version == 2 {
 		return tec.TestEngineNewPayloadV2(payload)

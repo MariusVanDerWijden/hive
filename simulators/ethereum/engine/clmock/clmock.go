@@ -27,6 +27,9 @@ var (
 	// Time delay between ForkchoiceUpdated and GetPayload to allow the clients
 	// to produce a new Payload
 	DefaultPayloadProductionClientDelay = time.Second
+
+	// Fork specific constants
+	BLOB_COMMITMENT_VERSION_KZG = byte(0x01)
 )
 
 type ExecutableDataHistory map[uint64]*api.ExecutableData
@@ -400,8 +403,18 @@ func (cl *CLMocker) GetNextPayload() {
 }
 
 func (cl *CLMocker) broadcastNextNewPayload() {
+	// Check if we have blobs to include in the broadcast
+	var versionedHashes []common.Hash
+	if cl.LatestBlobBundle != nil {
+		// Broadcast the blob bundle to all clients
+		var err error
+		versionedHashes, err = helper.VersionedHashesFromBlobBundle(cl.LatestBlobBundle, BLOB_COMMITMENT_VERSION_KZG)
+		if err != nil {
+			cl.Fatalf("CLMocker: Could not get versioned hashes from blob bundle: %v", err)
+		}
+	}
 	// Broadcast the executePayload to all clients
-	responses := cl.BroadcastNewPayload(&cl.LatestPayloadBuilt)
+	responses := cl.BroadcastNewPayload(&cl.LatestPayloadBuilt, versionedHashes)
 	for _, resp := range responses {
 		if resp.Error != nil {
 			cl.Logf("CLMocker: BroadcastNewPayload Error (%v): %v\n", resp.Container, resp.Error)
@@ -609,7 +622,7 @@ type ExecutePayloadOutcome struct {
 	Error                  error
 }
 
-func (cl *CLMocker) BroadcastNewPayload(payload *api.ExecutableData) []ExecutePayloadOutcome {
+func (cl *CLMocker) BroadcastNewPayload(payload *api.ExecutableData, versionedHashes []common.Hash) []ExecutePayloadOutcome {
 	responses := make([]ExecutePayloadOutcome, len(cl.EngineClients))
 	for i, ec := range cl.EngineClients {
 		responses[i].Container = ec.ID()
@@ -620,7 +633,7 @@ func (cl *CLMocker) BroadcastNewPayload(payload *api.ExecutableData) []ExecutePa
 			err             error
 		)
 		if isCancun(payload.Timestamp, cl.CancunTimestamp) {
-			execPayloadResp, err = ec.NewPayloadV3(ctx, payload)
+			execPayloadResp, err = ec.NewPayloadV3(ctx, payload, versionedHashes)
 		} else if isShanghai(payload.Timestamp, cl.ShanghaiTimestamp) {
 			execPayloadResp, err = ec.NewPayloadV2(ctx, payload)
 		} else {

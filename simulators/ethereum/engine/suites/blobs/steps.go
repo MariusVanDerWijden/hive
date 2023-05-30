@@ -112,6 +112,46 @@ type NewPayloads struct {
 	ExpectedBlobs []helper.BlobID
 	// Delay between FcU and GetPayload calls
 	GetPayloadDelay uint64
+	// Extra modifications on NewPayload to the versioned hashes
+	VersionedHashesModification *VersionedHashesModification
+}
+
+// Tests to do:
+// - Test removing a versioned hash from the payload
+// - Test adding a versioned hash to the payload
+// - Test modifying a versioned hash in the payload
+// - Test modifying the version of a  versioned hash in the payload
+// - Test with nil versioned hashes
+// - Test with empty versioned hashes (when payload contains blobs)
+// - Test with non-empty versioned hashes (when payload does not contain blobs)
+// - All tests with and without syncing the client
+
+type VersionedHashesModification struct {
+	VersionedHashesBlobs []helper.BlobID
+	HashVersions         []byte
+}
+
+func (v *VersionedHashesModification) VersionedHashes() ([]common.Hash, error) {
+	if v.VersionedHashesBlobs == nil {
+		return nil, nil
+	}
+
+	versionedHashes := make([]common.Hash, len(v.VersionedHashesBlobs))
+
+	for i, blobID := range v.VersionedHashesBlobs {
+		var version byte
+		if v.HashVersions != nil && len(v.HashVersions) > i {
+			version = v.HashVersions[i]
+		}
+		var err error
+		versionedHashes[i], err = blobID.GetVersionedHash(version)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	return versionedHashes, nil
 }
 
 func (step NewPayloads) GetPayloadCount() uint64 {
@@ -251,6 +291,19 @@ func (step NewPayloads) Execute(t *BlobTestContext) error {
 
 				if err := step.VerifyBlobBundle(t.TestBlobTxPool, payload, blobBundle); err != nil {
 					t.Fatalf("FAIL: Error verifying blob bundle (payload %d/%d): %v", p+1, payloadCount, err)
+				}
+			},
+			OnNewPayloadBroadcast: func() {
+				if step.VersionedHashesModification != nil {
+					// Send a new payload with the modified versioned hashes
+					versionedHashes, err := step.VersionedHashesModification.VersionedHashes()
+					if err != nil {
+						t.Fatalf("FAIL: Error getting modified versioned hashes (payload %d/%d): %v", p+1, payloadCount, err)
+					}
+					r := t.TestEngine.TestEngineNewPayloadV3(&t.CLMock.LatestPayloadBuilt, versionedHashes)
+					// All tests that modify the versioned hashes expect an
+					// `INVALID` response, even if the client is out of sync
+					r.ExpectStatus(test.Invalid)
 				}
 			},
 		})

@@ -2673,7 +2673,7 @@ func blockStatusReorg(t *test.Env) {
 			}
 
 			// Send custom payload and fcU to it
-			t.CLMock.BroadcastNewPayload(customizedPayload)
+			t.CLMock.BroadcastNewPayload(customizedPayload, nil)
 			t.CLMock.BroadcastForkchoiceUpdated(&api.ForkchoiceStateV1{
 				HeadBlockHash:      customizedPayload.BlockHash,
 				SafeBlockHash:      t.CLMock.LatestForkchoice.SafeBlockHash,

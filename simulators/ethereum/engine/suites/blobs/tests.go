@@ -25,6 +25,8 @@ var (
 	MAX_BLOBS_PER_BLOCK    = uint64(4)
 
 	DATA_GAS_COST_INCREMENT_EXCEED_BLOBS = uint64(12)
+	// Fork specific constants
+	BLOB_COMMITMENT_VERSION_KZG = byte(0x01)
 )
 
 // Execution specification reference:
@@ -290,6 +292,284 @@ var Tests = []test.SpecInterface{
 			NewPayloads{
 				ExpectedIncludedBlobCount: 1,
 				ExpectedBlobs:             []helper.BlobID{3},
+			},
+		},
+	},
+	// Test versioned hashes in Engine API NewPayloadV3
+	&BlobsBaseSpec{
+
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Missing Hash",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is missing one of the hashes.
+			`,
+		},
+
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// First, we send a couple of blob transactions on genesis,
+			// with enough data gas cost to make sure they are included in the first block.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+
+			// We create a mock new payload with one of the hashes missing.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0},
+				},
+			},
+		},
+	},
+	&BlobsBaseSpec{
+
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Extra Hash",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is has an extra hash for a blob that is not in the payload.
+			`,
+		},
+
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// First, we send a couple of blob transactions on genesis,
+			// with enough data gas cost to make sure they are included in the first block.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+
+			// We create a mock new payload with one of the hashes missing.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0, 1, 2},
+				},
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Out of Order",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is out of order.
+			`,
+		},
+
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// First, we send a couple of blob transactions on genesis,
+			// with enough data gas cost to make sure they are included in the first block.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+
+			// We create a mock new payload with one of the hashes missing.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{1, 0},
+				},
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Repeated Hash",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			has a blob that is repeated in the array.
+			`,
+		},
+
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// First, we send a couple of blob transactions on genesis,
+			// with enough data gas cost to make sure they are included in the first block.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+
+			// We create a mock new payload with one of the hashes missing.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0, 1, 1},
+				},
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Incorrect Hash",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			has a blob that is repeated in the array.
+			`,
+		},
+		// TODO: It could be worth it to test this where the blob is indeed in
+		//  the mempool, but it was not included in the payload.
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// First, we send a couple of blob transactions on genesis,
+			// with enough data gas cost to make sure they are included in the first block.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+
+			// We create a mock new payload with one of the hashes missing.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0, 2},
+				},
+			},
+		},
+	},
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Incorrect Version",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			has a single blob that has an incorrect version.
+			`,
+		},
+		// TODO: It could be worth it to test this where the blob is indeed in
+		//  the mempool, but it was not included in the payload.
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// First, we send a couple of blob transactions on genesis,
+			// with enough data gas cost to make sure they are included in the first block.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+
+			// We create a mock new payload with one of the hashes missing.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0, 1},
+					HashVersions:         []byte{BLOB_COMMITMENT_VERSION_KZG, BLOB_COMMITMENT_VERSION_KZG + 1},
+				},
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Nil Hashes",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is nil, even though the fork has already happened.
+			`,
+		},
+		// TODO: It could be worth it to test this where the blob is indeed in
+		//  the mempool, but it was not included in the payload.
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// First, we send a couple of blob transactions on genesis,
+			// with enough data gas cost to make sure they are included in the first block.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+
+			// We create a mock new payload with one of the hashes missing.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: nil,
+				},
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Empty Hashes",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is empty, even though there are blobs in the payload.
+			`,
+		},
+		// TODO: It could be worth it to test this where the blob is indeed in
+		//  the mempool, but it was not included in the payload.
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// First, we send a couple of blob transactions on genesis,
+			// with enough data gas cost to make sure they are included in the first block.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+
+			// We create a mock new payload with one of the hashes missing.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{},
+				},
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "NewPayloadV3 Versioned Hashes, Non-Empty Hashes",
+			About: `
+			Tests VersionedHashes in Engine API NewPayloadV3 where the array
+			is contains hashes, even though there are no blobs in the payload.
+			`,
+		},
+		// TODO: It could be worth it to test this where the blob is indeed in
+		//  the mempool, but it was not included in the payload.
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// We create a mock new payload with one of the hashes missing.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 0,
+				ExpectedBlobs:             []helper.BlobID{},
+				VersionedHashesModification: &VersionedHashesModification{
+					VersionedHashesBlobs: []helper.BlobID{0, 1},
+				},
 			},
 		},
 	},

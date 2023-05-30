@@ -630,6 +630,19 @@ func (blobId BlobID) GenerateBlob() (*types.Blob, *types.KZGCommitment, error) {
 	return &blob, &typesKzgCommitment, nil
 }
 
+func (blobId BlobID) GetVersionedHash(commitmentVersion byte) (common.Hash, error) {
+	_, kzgCommitment, err := blobId.GenerateBlob()
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if kzgCommitment == nil {
+		return common.Hash{}, errors.New("nil kzgCommitment")
+	}
+	sha256Hash := sha256.Sum256((*kzgCommitment)[:])
+	versionedHash := common.BytesToHash(append([]byte{commitmentVersion}, sha256Hash[1:]...))
+	return versionedHash, nil
+}
+
 func BlobDataGenerator(startBlobId BlobID, blobCount uint64) ([]common.Hash, *types.BlobTxWrapData, error) {
 	blobData := types.BlobTxWrapData{
 		Blobs:    make(types.Blobs, blobCount),

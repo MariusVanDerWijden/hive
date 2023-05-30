@@ -695,7 +695,7 @@ func (n *GethNode) SetBlock(block *types.Block, parentNumber uint64, parentRoot 
 }
 
 // Engine API
-func (n *GethNode) NewPayload(ctx context.Context, version int, pl interface{}) (beacon.PayloadStatusV1, error) {
+func (n *GethNode) NewPayload(ctx context.Context, version int, pl interface{}, vh []common.Hash) (beacon.PayloadStatusV1, error) {
 	switch version {
 	case 1:
 		if c, ok := pl.(*client_types.ExecutableDataV1); ok {
@@ -711,7 +711,7 @@ func (n *GethNode) NewPayload(ctx context.Context, version int, pl interface{}) 
 		}
 	case 3:
 		if c, ok := pl.(*beacon.ExecutableData); ok {
-			return n.NewPayloadV3(ctx, c)
+			return n.NewPayloadV3(ctx, c, vh)
 		} else {
 			return beacon.PayloadStatusV1{}, fmt.Errorf("wrong type %T", pl)
 		}
@@ -734,7 +734,7 @@ func (n *GethNode) NewPayloadV2(ctx context.Context, pl *beacon.ExecutableData) 
 	return resp, err
 }
 
-func (n *GethNode) NewPayloadV3(ctx context.Context, pl *beacon.ExecutableData) (beacon.PayloadStatusV1, error) {
+func (n *GethNode) NewPayloadV3(ctx context.Context, pl *beacon.ExecutableData, versionedHashes []common.Hash) (beacon.PayloadStatusV1, error) {
 	n.latestPayloadSent = pl
 	resp, err := n.api.NewPayloadV3(*pl)
 	n.latestPayloadStatusReponse = &resp
