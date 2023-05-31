@@ -313,8 +313,8 @@ var Tests = []test.SpecInterface{
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{0},
 				},
 			},
 		},
@@ -338,8 +338,8 @@ var Tests = []test.SpecInterface{
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0, 1, 2},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{0, 1, 2},
 				},
 			},
 		},
@@ -361,8 +361,8 @@ var Tests = []test.SpecInterface{
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{1, 0},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{1, 0},
 				},
 			},
 		},
@@ -384,8 +384,8 @@ var Tests = []test.SpecInterface{
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0, 1, 1},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{0, 1, 1},
 				},
 			},
 		},
@@ -407,8 +407,8 @@ var Tests = []test.SpecInterface{
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0, 2},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{0, 2},
 				},
 			},
 		},
@@ -429,9 +429,9 @@ var Tests = []test.SpecInterface{
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0, 1},
-					HashVersions:         []byte{BLOB_COMMITMENT_VERSION_KZG, BLOB_COMMITMENT_VERSION_KZG + 1},
+				VersionedHashes: &VersionedHashes{
+					Blobs:        []helper.BlobID{0, 1},
+					HashVersions: []byte{BLOB_COMMITMENT_VERSION_KZG, BLOB_COMMITMENT_VERSION_KZG + 1},
 				},
 			},
 		},
@@ -453,8 +453,8 @@ var Tests = []test.SpecInterface{
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: nil,
+				VersionedHashes: &VersionedHashes{
+					Blobs: nil,
 				},
 			},
 		},
@@ -476,8 +476,8 @@ var Tests = []test.SpecInterface{
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
 				ExpectedBlobs:             []helper.BlobID{0, 1},
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{},
 				},
 			},
 		},
@@ -495,8 +495,8 @@ var Tests = []test.SpecInterface{
 			NewPayloads{
 				ExpectedIncludedBlobCount: 0,
 				ExpectedBlobs:             []helper.BlobID{},
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0, 1},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{0, 1},
 				},
 			},
 		},
@@ -530,8 +530,8 @@ var Tests = []test.SpecInterface{
 			},
 			SendModifiedLatestPayload{
 				ClientID: 1,
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{0},
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -566,8 +566,8 @@ var Tests = []test.SpecInterface{
 			},
 			SendModifiedLatestPayload{
 				ClientID: 1,
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0, 1, 2},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{0, 1, 2},
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -599,8 +599,8 @@ var Tests = []test.SpecInterface{
 			},
 			SendModifiedLatestPayload{
 				ClientID: 1,
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{1, 0},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{1, 0},
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -633,8 +633,8 @@ var Tests = []test.SpecInterface{
 			},
 			SendModifiedLatestPayload{
 				ClientID: 1,
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0, 1, 1},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{0, 1, 1},
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -667,8 +667,8 @@ var Tests = []test.SpecInterface{
 			},
 			SendModifiedLatestPayload{
 				ClientID: 1,
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0, 2},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{0, 2},
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -700,9 +700,9 @@ var Tests = []test.SpecInterface{
 			},
 			SendModifiedLatestPayload{
 				ClientID: 1,
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0, 1},
-					HashVersions:         []byte{BLOB_COMMITMENT_VERSION_KZG, BLOB_COMMITMENT_VERSION_KZG + 1},
+				VersionedHashes: &VersionedHashes{
+					Blobs:        []helper.BlobID{0, 1},
+					HashVersions: []byte{BLOB_COMMITMENT_VERSION_KZG, BLOB_COMMITMENT_VERSION_KZG + 1},
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -735,8 +735,8 @@ var Tests = []test.SpecInterface{
 			},
 			SendModifiedLatestPayload{
 				ClientID: 1,
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: nil,
+				VersionedHashes: &VersionedHashes{
+					Blobs: nil,
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -769,8 +769,8 @@ var Tests = []test.SpecInterface{
 			},
 			SendModifiedLatestPayload{
 				ClientID: 1,
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{},
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -799,8 +799,8 @@ var Tests = []test.SpecInterface{
 			},
 			SendModifiedLatestPayload{
 				ClientID: 1,
-				VersionedHashesModification: &VersionedHashesModification{
-					VersionedHashesBlobs: []helper.BlobID{0, 1},
+				VersionedHashes: &VersionedHashes{
+					Blobs: []helper.BlobID{0, 1},
 				},
 				ExpectedStatus: test.Invalid,
 			},

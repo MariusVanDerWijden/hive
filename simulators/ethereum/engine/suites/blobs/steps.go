@@ -114,32 +114,22 @@ type NewPayloads struct {
 	// Delay between FcU and GetPayload calls
 	GetPayloadDelay uint64
 	// Extra modifications on NewPayload to the versioned hashes
-	VersionedHashesModification *VersionedHashesModification
+	VersionedHashes *VersionedHashes
 }
 
-// Tests to do:
-// - Test removing a versioned hash from the payload
-// - Test adding a versioned hash to the payload
-// - Test modifying a versioned hash in the payload
-// - Test modifying the version of a  versioned hash in the payload
-// - Test with nil versioned hashes
-// - Test with empty versioned hashes (when payload contains blobs)
-// - Test with non-empty versioned hashes (when payload does not contain blobs)
-// - All tests with and without syncing the client
-
-type VersionedHashesModification struct {
-	VersionedHashesBlobs []helper.BlobID
-	HashVersions         []byte
+type VersionedHashes struct {
+	Blobs        []helper.BlobID
+	HashVersions []byte
 }
 
-func (v *VersionedHashesModification) VersionedHashes() ([]common.Hash, error) {
-	if v.VersionedHashesBlobs == nil {
+func (v *VersionedHashes) VersionedHashes() ([]common.Hash, error) {
+	if v.Blobs == nil {
 		return nil, nil
 	}
 
-	versionedHashes := make([]common.Hash, len(v.VersionedHashesBlobs))
+	versionedHashes := make([]common.Hash, len(v.Blobs))
 
-	for i, blobID := range v.VersionedHashesBlobs {
+	for i, blobID := range v.Blobs {
 		var version byte
 		if v.HashVersions != nil && len(v.HashVersions) > i {
 			version = v.HashVersions[i]
@@ -155,10 +145,10 @@ func (v *VersionedHashesModification) VersionedHashes() ([]common.Hash, error) {
 	return versionedHashes, nil
 }
 
-func (v *VersionedHashesModification) Description() string {
-	desc := "VersionedHashesModification: "
-	if v.VersionedHashesBlobs != nil {
-		desc += fmt.Sprintf("%v", v.VersionedHashesBlobs)
+func (v *VersionedHashes) Description() string {
+	desc := "VersionedHashes: "
+	if v.Blobs != nil {
+		desc += fmt.Sprintf("%v", v.Blobs)
 	}
 	if v.HashVersions != nil {
 		desc += fmt.Sprintf(" with versions %v", v.HashVersions)
@@ -307,9 +297,9 @@ func (step NewPayloads) Execute(t *BlobTestContext) error {
 				}
 			},
 			OnNewPayloadBroadcast: func() {
-				if step.VersionedHashesModification != nil {
+				if step.VersionedHashes != nil {
 					// Send a new payload with the modified versioned hashes
-					versionedHashes, err := step.VersionedHashesModification.VersionedHashes()
+					versionedHashes, err := step.VersionedHashes.VersionedHashes()
 					if err != nil {
 						t.Fatalf("FAIL: Error getting modified versioned hashes (payload %d/%d): %v", p+1, payloadCount, err)
 					}
@@ -330,8 +320,8 @@ func (step NewPayloads) Execute(t *BlobTestContext) error {
 }
 
 func (step NewPayloads) Description() string {
-	if step.VersionedHashesModification != nil {
-		return fmt.Sprintf("NewPayloads: %d payloads, %d blobs expected, %s", step.GetPayloadCount(), step.ExpectedIncludedBlobCount, step.VersionedHashesModification.Description())
+	if step.VersionedHashes != nil {
+		return fmt.Sprintf("NewPayloads: %d payloads, %d blobs expected, %s", step.GetPayloadCount(), step.ExpectedIncludedBlobCount, step.VersionedHashes.Description())
 	}
 	return fmt.Sprintf("NewPayloads: %d payloads, %d blobs expected", step.GetPayloadCount(), step.ExpectedIncludedBlobCount)
 }
@@ -423,7 +413,7 @@ func (step SendBlobTransactions) Description() string {
 type SendModifiedLatestPayload struct {
 	ClientID uint64
 	// Versioned hashes modification
-	VersionedHashesModification *VersionedHashesModification
+	VersionedHashes *VersionedHashes
 	// Expected status of the new payload request
 	ExpectedStatus test.PayloadStatus
 }
@@ -435,7 +425,7 @@ func (step SendModifiedLatestPayload) Execute(t *BlobTestContext) error {
 		return fmt.Errorf("no payload available")
 	}
 	// Modify the versioned hashes
-	versionedHashes, err := step.VersionedHashesModification.VersionedHashes()
+	versionedHashes, err := step.VersionedHashes.VersionedHashes()
 	if err != nil {
 		return fmt.Errorf("error getting modified versioned hashes: %v", err)
 	}
@@ -451,8 +441,8 @@ func (step SendModifiedLatestPayload) Execute(t *BlobTestContext) error {
 
 func (step SendModifiedLatestPayload) Description() string {
 	desc := fmt.Sprintf("SendModifiedLatestPayload: client %d, expected status %s, ", step.ClientID, step.ExpectedStatus)
-	if step.VersionedHashesModification != nil {
-		desc += step.VersionedHashesModification.Description()
+	if step.VersionedHashes != nil {
+		desc += step.VersionedHashes.Description()
 	}
 
 	return desc
