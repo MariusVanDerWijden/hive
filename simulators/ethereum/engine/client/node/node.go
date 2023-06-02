@@ -36,9 +36,9 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/hive/hivesim"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
-	client_types "github.com/ethereum/hive/simulators/ethereum/engine/client/types"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
+	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 )
 
 type GethNodeTestConfiguration struct {
@@ -206,6 +206,8 @@ type GethNode struct {
 	config GethNodeTestConfiguration
 }
 
+var _ client.EngineClient = (*GethNode)(nil)
+
 func newNode(config GethNodeTestConfiguration, bootnodes []string, genesis *core.Genesis) (*GethNode, error) {
 	// Define the basic configurations for the Ethereum node
 	datadir, _ := os.MkdirTemp("", "")
@@ -234,14 +236,14 @@ func restart(startConfig GethNodeTestConfiguration, bootnodes []string, datadir 
 		return nil, err
 	}
 	econfig := &ethconfig.Config{
-		Genesis:          genesis,
-		NetworkId:        genesis.Config.ChainID.Uint64(),
-		SyncMode:         downloader.FullSync,
-		DatabaseCache:    256,
-		DatabaseHandles:  256,
-		TxPool:           txpool.DefaultConfig,
-		GPO:              ethconfig.Defaults.GPO,
-		Ethash:           ethconfig.Defaults.Ethash,
+		Genesis:         genesis,
+		NetworkId:       genesis.Config.ChainID.Uint64(),
+		SyncMode:        downloader.FullSync,
+		DatabaseCache:   256,
+		DatabaseHandles: 256,
+		TxPool:          txpool.DefaultConfig,
+		GPO:             ethconfig.Defaults.GPO,
+		// Ethash:           ethconfig.Defaults.Ethash,
 		Miner:            ethconfig.Defaults.Miner,
 		LightServ:        100,
 		LightPeers:       int(startConfig.MaxPeers.Int64()) - 1,
@@ -288,18 +290,20 @@ func restart(startConfig GethNodeTestConfiguration, bootnodes []string, datadir 
 	}
 
 	g.running, g.closing = context.WithCancel(context.Background())
-	if startConfig.PoWMiner || startConfig.Ethash {
-		// Create the ethash consensus module
-		ethashConfig := ethconfig.Defaults.Ethash
-		ethashConfig.PowMode = ethash.ModeNormal
-		ethashConfig.CacheDir = "/ethash"
-		ethashConfig.DatasetDir = ethashConfig.CacheDir
-		g.ethashEngine = ethash.New(ethashConfig, nil, false)
-	}
-	if startConfig.PoWMiner {
-		// Enable mining
-		go g.EnablePoWMining()
-	}
+	/*
+		if startConfig.PoWMiner || startConfig.Ethash {
+			// Create the ethash consensus module
+			ethashConfig := ethconfig.Defaults.Ethash
+			ethashConfig.PowMode = ethash.ModeNormal
+			ethashConfig.CacheDir = "/ethash"
+			ethashConfig.DatasetDir = ethashConfig.CacheDir
+			g.ethashEngine = ethash.New(ethashConfig, nil, false)
+		}
+		if startConfig.PoWMiner {
+			// Enable mining
+			go g.EnablePoWMining()
+		}
+	*/
 
 	// Start thread to monitor the amount of gossiped blocks this node receives
 	go g.SubscribeP2PEvents()
@@ -457,7 +461,7 @@ func (n *GethNode) PoWMiningLoop() {
 			// Modify the sealed block if necessary
 			if n.config.BlockModifier != nil {
 				sealVerifier := func(h *types.Header) bool {
-					return n.ethashEngine.VerifyHeader(n.eth.BlockChain(), h, true) == nil
+					return n.ethashEngine.VerifyHeader(n.eth.BlockChain(), h) == nil
 				}
 				b, err = n.config.BlockModifier.ModifySealedBlock(sealVerifier, b)
 				if err != nil {
@@ -616,7 +620,7 @@ func (v *validator) ValidateState(block *types.Block, state *state.StateDB, rece
 
 type processor struct{}
 
-func (p *processor) Process(block *types.Block, excessDataGas *big.Int, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, error) {
+func (p *processor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, error) {
 	return types.Receipts{}, []*types.Log{}, 21000, nil
 }
 
@@ -656,7 +660,7 @@ func (n *GethNode) SetBlock(block *types.Block, parentNumber uint64, parentRoot 
 	}
 	statedb.StartPrefetcher("chain")
 	var failedProcessing bool
-	receipts, _, _, err := n.eth.BlockChain().Processor().Process(block, n.eth.BlockChain().CurrentBlock().ExcessDataGas, statedb, *n.eth.BlockChain().GetVMConfig())
+	receipts, _, _, err := n.eth.BlockChain().Processor().Process(block, statedb, *n.eth.BlockChain().GetVMConfig())
 	if err != nil {
 		failedProcessing = true
 	}
@@ -698,7 +702,7 @@ func (n *GethNode) SetBlock(block *types.Block, parentNumber uint64, parentRoot 
 func (n *GethNode) NewPayload(ctx context.Context, version int, pl interface{}, vh []common.Hash) (beacon.PayloadStatusV1, error) {
 	switch version {
 	case 1:
-		if c, ok := pl.(*client_types.ExecutableDataV1); ok {
+		if c, ok := pl.(*e_typ.ExecutableDataV1); ok {
 			return n.NewPayloadV1(ctx, c)
 		} else {
 			return beacon.PayloadStatusV1{}, fmt.Errorf("wrong type %T", pl)
@@ -719,7 +723,7 @@ func (n *GethNode) NewPayload(ctx context.Context, version int, pl interface{}, 
 	return beacon.PayloadStatusV1{}, fmt.Errorf("unknown version %d", version)
 }
 
-func (n *GethNode) NewPayloadV1(ctx context.Context, pl *client_types.ExecutableDataV1) (beacon.PayloadStatusV1, error) {
+func (n *GethNode) NewPayloadV1(ctx context.Context, pl *e_typ.ExecutableDataV1) (beacon.PayloadStatusV1, error) {
 	ed := pl.ToExecutableData()
 	n.latestPayloadSent = &ed
 	resp, err := n.api.NewPayloadV1(ed)
@@ -783,23 +787,23 @@ func (n *GethNode) GetPayloadV2(ctx context.Context, payloadId *beacon.PayloadID
 	return *p.ExecutionPayload, p.BlockValue, err
 }
 
-func (n *GethNode) GetPayloadV3(ctx context.Context, payloadId *beacon.PayloadID) (beacon.ExecutableData, *big.Int, *beacon.BlobsBundle, error) {
+func (n *GethNode) GetPayloadV3(ctx context.Context, payloadId *beacon.PayloadID) (beacon.ExecutableData, *big.Int, *e_typ.BlobsBundle, error) {
 	p, err := n.api.GetPayloadV3(*payloadId)
 	if p == nil || err != nil {
 		return beacon.ExecutableData{}, nil, nil, err
 	}
-	return *p.ExecutionPayload, p.BlockValue, p.BlobsBundle, err
+	return *p.ExecutionPayload, p.BlockValue, nil, err
 }
 
-func (n *GethNode) GetPayloadBodiesByRangeV1(ctx context.Context, start uint64, count uint64) ([]*client_types.ExecutionPayloadBodyV1, error) {
+func (n *GethNode) GetPayloadBodiesByRangeV1(ctx context.Context, start uint64, count uint64) ([]*e_typ.ExecutionPayloadBodyV1, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (n *GethNode) GetPayloadBodiesByHashV1(ctx context.Context, hashes []common.Hash) ([]*client_types.ExecutionPayloadBodyV1, error) {
+func (n *GethNode) GetPayloadBodiesByHashV1(ctx context.Context, hashes []common.Hash) ([]*e_typ.ExecutionPayloadBodyV1, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (n *GethNode) GetBlobsBundleV1(ctx context.Context, payloadId *beacon.PayloadID) (*beacon.BlobsBundle, error) {
+func (n *GethNode) GetBlobsBundleV1(ctx context.Context, payloadId *beacon.PayloadID) (*e_typ.BlobsBundle, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
@@ -860,16 +864,24 @@ func (n *GethNode) HeaderByNumber(ctx context.Context, number *big.Int) (*types.
 	return b.Header(), err
 }
 
-func (n *GethNode) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return n.eth.APIBackend.SendTx(ctx, tx)
+func (n *GethNode) SendTransaction(ctx context.Context, tx e_typ.Transaction) error {
+	if v, ok := tx.(*types.Transaction); ok {
+		return n.eth.APIBackend.SendTx(ctx, v)
+	}
+	return fmt.Errorf("invalid transaction type")
 }
 
-func (n *GethNode) SendTransactions(ctx context.Context, txs []*types.Transaction) []error {
+func (n *GethNode) SendTransactions(ctx context.Context, txs ...e_typ.Transaction) []error {
 	for _, tx := range txs {
-		err := n.eth.APIBackend.SendTx(ctx, tx)
-		if err != nil {
-			return []error{err}
+		if v, ok := tx.(*types.Transaction); ok {
+			err := n.eth.APIBackend.SendTx(ctx, v)
+			if err != nil {
+				return []error{err}
+			}
+		} else {
+			return []error{fmt.Errorf("invalid transaction type")}
 		}
+
 	}
 	return nil
 }

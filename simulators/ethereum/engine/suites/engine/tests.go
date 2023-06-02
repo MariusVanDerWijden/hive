@@ -11,11 +11,11 @@ import (
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client/hive_rpc"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client/node"
-	client_types "github.com/ethereum/hive/simulators/ethereum/engine/client/types"
 	"github.com/ethereum/hive/simulators/ethereum/engine/clmock"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
+	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -2335,7 +2335,7 @@ func (spec InvalidMissingAncestorReOrgSpec) GenerateSync() func(*test.Env) {
 						defer cancel()
 
 						p := api.BlockToExecutableData(altChainPayloads[i], common.Big0).ExecutionPayload
-						pv1 := &client_types.ExecutableDataV1{}
+						pv1 := &e_typ.ExecutableDataV1{}
 						pv1.FromExecutableData(p)
 						status, err := secondaryClient.NewPayloadV1(ctx, pv1)
 						if err != nil {
@@ -2487,7 +2487,7 @@ func blockStatusExecPayloadGen(transitionBlock bool) func(t *test.Env) {
 			t.CLMock.ProduceBlocks(5, clmock.BlockProcessCallbacks{})
 		}
 
-		var tx *types.Transaction
+		var tx e_typ.Transaction
 		t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{
 			OnPayloadProducerSelected: func() {
 				var err error
@@ -2535,7 +2535,7 @@ func blockStatusHeadBlockGen(transitionBlock bool) func(t *test.Env) {
 			t.CLMock.ProduceBlocks(5, clmock.BlockProcessCallbacks{})
 		}
 
-		var tx *types.Transaction
+		var tx e_typ.Transaction
 		t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{
 			OnPayloadProducerSelected: func() {
 				var err error
@@ -2930,7 +2930,7 @@ func transactionReorg(t *test.Env) {
 	for i := 0; i < txCount; i++ {
 		var (
 			noTxnPayload api.ExecutableData
-			tx           *types.Transaction
+			tx           e_typ.Transaction
 		)
 		// Generate two payloads, one with the transaction and the other one without it
 		t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{
@@ -3044,7 +3044,7 @@ func transactionReorgBlockhash(newNPOnRevert bool) func(t *test.Env) {
 			var (
 				mainPayload *api.ExecutableData
 				sidePayload *api.ExecutableData
-				tx          *types.Transaction
+				tx          e_typ.Transaction
 			)
 
 			t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{
@@ -3764,7 +3764,7 @@ func prevRandaoOpcodeTx(t *test.Env) {
 	var (
 		txCount        = 10
 		currentTxIndex = 0
-		txs            = make([]*types.Transaction, 0)
+		txs            = make([]e_typ.Transaction, 0)
 	)
 	t.CLMock.ProduceBlocks(txCount, clmock.BlockProcessCallbacks{
 		OnPayloadProducerSelected: func() {

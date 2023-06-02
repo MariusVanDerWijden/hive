@@ -20,9 +20,9 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/hive/hivesim"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
-	client_types "github.com/ethereum/hive/simulators/ethereum/engine/client/types"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
+	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
 )
@@ -36,6 +36,8 @@ type HiveRPCEngineStarter struct {
 	EthPort                 int
 	JWTSecret               []byte
 }
+
+var _ client.EngineStarter = (*HiveRPCEngineStarter)(nil)
 
 func (s HiveRPCEngineStarter) StartClient(T *hivesim.T, testContext context.Context, genesis *core.Genesis, ClientParams hivesim.Params, ClientFiles hivesim.Params, bootClients ...client.EngineClient) (client.EngineClient, error) {
 	var (
@@ -165,6 +167,8 @@ type HiveRPCEngineClient struct {
 	// Test account nonces
 	accTxInfoMap map[common.Address]*AccountTransactionInfo
 }
+
+var _ client.EngineClient = (*HiveRPCEngineClient)(nil)
 
 // NewClient creates a engine client that uses the given RPC client.
 func NewHiveRPCEngineClient(h *hivesim.Client, enginePort int, ethPort int, jwtSecretBytes []byte, ttd *big.Int, transport http.RoundTripper) *HiveRPCEngineClient {
@@ -358,11 +362,11 @@ func (ec *HiveRPCEngineClient) ForkchoiceUpdatedV2(ctx context.Context, fcState 
 
 // Get Payload API Calls
 
-func (ec *HiveRPCEngineClient) GetPayload(ctx context.Context, version int, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, *api.BlobsBundle, error) {
+func (ec *HiveRPCEngineClient) GetPayload(ctx context.Context, version int, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, *e_typ.BlobsBundle, error) {
 	var (
 		executableData api.ExecutableData
 		blockValue     *big.Int
-		blobsBundle    *api.BlobsBundle
+		blobsBundle    *e_typ.BlobsBundle
 		err            error
 		rpcString      = fmt.Sprintf("engine_getPayloadV%d", version)
 	)
@@ -372,7 +376,7 @@ func (ec *HiveRPCEngineClient) GetPayload(ctx context.Context, version int, payl
 	}
 
 	if version >= 2 {
-		var response api.ExecutionPayloadEnvelope
+		var response e_typ.ExecutionPayloadEnvelope
 		err = ec.c.CallContext(ctx, &response, rpcString, payloadId)
 		if response.ExecutionPayload != nil {
 			executableData = *response.ExecutionPayload
@@ -396,14 +400,14 @@ func (ec *HiveRPCEngineClient) GetPayloadV2(ctx context.Context, payloadId *api.
 	return ed, bv, err
 }
 
-func (ec *HiveRPCEngineClient) GetPayloadV3(ctx context.Context, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, *api.BlobsBundle, error) {
+func (ec *HiveRPCEngineClient) GetPayloadV3(ctx context.Context, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, *e_typ.BlobsBundle, error) {
 	return ec.GetPayload(ctx, 3, payloadId)
 }
 
 // Get Payload Bodies API Calls
-func (ec *HiveRPCEngineClient) GetPayloadBodiesByRangeV1(ctx context.Context, start uint64, count uint64) ([]*client_types.ExecutionPayloadBodyV1, error) {
+func (ec *HiveRPCEngineClient) GetPayloadBodiesByRangeV1(ctx context.Context, start uint64, count uint64) ([]*e_typ.ExecutionPayloadBodyV1, error) {
 	var (
-		result []*client_types.ExecutionPayloadBodyV1
+		result []*e_typ.ExecutionPayloadBodyV1
 		err    error
 	)
 	if err = ec.PrepareDefaultAuthCallToken(); err != nil {
@@ -414,9 +418,9 @@ func (ec *HiveRPCEngineClient) GetPayloadBodiesByRangeV1(ctx context.Context, st
 	return result, err
 }
 
-func (ec *HiveRPCEngineClient) GetPayloadBodiesByHashV1(ctx context.Context, hashes []common.Hash) ([]*client_types.ExecutionPayloadBodyV1, error) {
+func (ec *HiveRPCEngineClient) GetPayloadBodiesByHashV1(ctx context.Context, hashes []common.Hash) ([]*e_typ.ExecutionPayloadBodyV1, error) {
 	var (
-		result []*client_types.ExecutionPayloadBodyV1
+		result []*e_typ.ExecutionPayloadBodyV1
 		err    error
 	)
 	if err = ec.PrepareDefaultAuthCallToken(); err != nil {
@@ -428,9 +432,9 @@ func (ec *HiveRPCEngineClient) GetPayloadBodiesByHashV1(ctx context.Context, has
 }
 
 // Get Blob Bundle API Calls
-func (ec *HiveRPCEngineClient) GetBlobsBundleV1(ctx context.Context, payloadId *api.PayloadID) (*api.BlobsBundle, error) {
+func (ec *HiveRPCEngineClient) GetBlobsBundleV1(ctx context.Context, payloadId *api.PayloadID) (*e_typ.BlobsBundle, error) {
 	var (
-		result api.BlobsBundle
+		result e_typ.BlobsBundle
 		err    error
 	)
 	if err = ec.PrepareDefaultAuthCallToken(); err != nil {
@@ -456,7 +460,7 @@ func (ec *HiveRPCEngineClient) NewPayload(ctx context.Context, version int, payl
 	return result, err
 }
 
-func (ec *HiveRPCEngineClient) NewPayloadV1(ctx context.Context, payload *client_types.ExecutableDataV1) (api.PayloadStatusV1, error) {
+func (ec *HiveRPCEngineClient) NewPayloadV1(ctx context.Context, payload *e_typ.ExecutableDataV1) (api.PayloadStatusV1, error) {
 	ed := payload.ToExecutableData()
 	ec.latestPayloadSent = &ed
 	return ec.NewPayload(ctx, 1, payload, nil)
@@ -553,7 +557,15 @@ func (ec *HiveRPCEngineClient) UpdateNonce(testCtx context.Context, account comm
 	return nil
 }
 
-func (ec *HiveRPCEngineClient) SendTransactions(ctx context.Context, txs []*types.Transaction) []error {
+func (ec *HiveRPCEngineClient) SendTransaction(ctx context.Context, tx e_typ.Transaction) error {
+	data, err := tx.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	return ec.cEth.CallContext(ctx, nil, "eth_sendRawTransaction", hexutil.Encode(data))
+}
+
+func (ec *HiveRPCEngineClient) SendTransactions(ctx context.Context, txs ...e_typ.Transaction) []error {
 	reqs := make([]rpc.BatchElem, len(txs))
 	hashes := make([]common.Hash, len(txs))
 	for i := range reqs {

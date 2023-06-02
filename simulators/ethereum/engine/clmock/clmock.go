@@ -11,9 +11,9 @@ import (
 
 	api "github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
-	client_types "github.com/ethereum/hive/simulators/ethereum/engine/client/types"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
+	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -91,7 +91,7 @@ type CLMocker struct {
 	LatestHeader            *types.Header
 	LatestPayloadBuilt      api.ExecutableData
 	LatestBlockValue        *big.Int
-	LatestBlobBundle        *api.BlobsBundle
+	LatestBlobBundle        *e_typ.BlobsBundle
 	LatestPayloadAttributes api.PayloadAttributes
 	LatestExecutedPayload   api.ExecutableData
 	LatestForkchoice        api.ForkchoiceStateV1
@@ -642,7 +642,7 @@ func (cl *CLMocker) BroadcastNewPayload(payload *api.ExecutableData, versionedHa
 		} else if isShanghai(payload.Timestamp, cl.ShanghaiTimestamp) {
 			execPayloadResp, err = ec.NewPayloadV2(ctx, payload)
 		} else {
-			edv1 := &client_types.ExecutableDataV1{}
+			edv1 := &e_typ.ExecutableDataV1{}
 			edv1.FromExecutableData(payload)
 			execPayloadResp, err = ec.NewPayloadV1(ctx, edv1)
 		}

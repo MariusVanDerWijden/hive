@@ -9,6 +9,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+type BinaryMarshable interface {
+	MarshalBinary() ([]byte, error)
+}
+
 //go:generate go run github.com/fjl/gencodec -type ExecutionPayloadBodyV1 -field-override executionPayloadBodyV1Marshaling -out gen_epbv1.go
 type ExecutionPayloadBodyV1 struct {
 	Transactions [][]byte            `json:"transactions"  gencodec:"required"`
@@ -89,4 +93,16 @@ func (edv1 *ExecutableDataV1) FromExecutableData(ed *api.ExecutableData) {
 	edv1.BaseFeePerGas = ed.BaseFeePerGas
 	edv1.BlockHash = ed.BlockHash
 	edv1.Transactions = ed.Transactions
+}
+
+//go:generate go run github.com/fjl/gencodec -type ExecutionPayloadEnvelope -field-override executionPayloadEnvelopeMarshaling -out gen_epe.go
+
+type ExecutionPayloadEnvelope struct {
+	ExecutionPayload *api.ExecutableData `json:"executionPayload" gencodec:"required"`
+	BlockValue       *big.Int            `json:"blockValue"       gencodec:"required"`
+	BlobsBundle      *BlobsBundle        `json:"blobsBundle"      gencodec:"omitempty"`
+}
+
+type executionPayloadEnvelopeMarshaling struct {
+	BlockValue *hexutil.Big
 }

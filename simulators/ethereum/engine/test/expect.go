@@ -14,8 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
-	client_types "github.com/ethereum/hive/simulators/ethereum/engine/client/types"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
+	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 )
 
 // Print the caller to this file
@@ -218,7 +218,7 @@ type NewPayloadResponseExpectObject struct {
 func (tec *TestEngineClient) TestEngineNewPayloadV1(payload *api.ExecutableData) *NewPayloadResponseExpectObject {
 	ctx, cancel := context.WithTimeout(tec.TestContext, globals.RPCTimeout)
 	defer cancel()
-	edv1 := &client_types.ExecutableDataV1{}
+	edv1 := &e_typ.ExecutableDataV1{}
 	edv1.FromExecutableData(payload)
 	status, err := tec.Engine.NewPayloadV1(ctx, edv1)
 	ret := &NewPayloadResponseExpectObject{
@@ -510,7 +510,7 @@ func (exp *GetPayloadResponseExpectObject) ExpectTimestamp(expectedTimestamp uin
 // GetPayloadBodies
 type GetPayloadBodiesResponseExpectObject struct {
 	*ExpectEnv
-	PayloadBodies []*client_types.ExecutionPayloadBodyV1
+	PayloadBodies []*e_typ.ExecutionPayloadBodyV1
 	BlockValue    *big.Int
 	Version       int
 	Error         error
@@ -647,7 +647,7 @@ func CompareWithdrawals(want []*types.Withdrawal, got []*types.Withdrawal) error
 	return nil
 }
 
-func ComparePayloadBodies(want *client_types.ExecutionPayloadBodyV1, got *client_types.ExecutionPayloadBodyV1) error {
+func ComparePayloadBodies(want *e_typ.ExecutionPayloadBodyV1, got *e_typ.ExecutionPayloadBodyV1) error {
 	if want == nil || got == nil {
 		if want == nil && got == nil {
 			return nil
@@ -666,7 +666,7 @@ func ComparePayloadBodies(want *client_types.ExecutionPayloadBodyV1, got *client
 	return nil
 }
 
-func (exp *GetPayloadBodiesResponseExpectObject) ExpectPayloadBody(index uint64, payloadBody *client_types.ExecutionPayloadBodyV1) {
+func (exp *GetPayloadBodiesResponseExpectObject) ExpectPayloadBody(index uint64, payloadBody *e_typ.ExecutionPayloadBodyV1) {
 	exp.ExpectNoError()
 	if exp.PayloadBodies == nil {
 		exp.Fatalf("FAIL (%s): Expected payload body in list on EngineGetPayloadBodiesV%d, but list is nil", exp.TestName, exp.Version)

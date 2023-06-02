@@ -15,11 +15,11 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client/hive_rpc"
-	client_types "github.com/ethereum/hive/simulators/ethereum/engine/client/types"
 	"github.com/ethereum/hive/simulators/ethereum/engine/clmock"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
+	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 )
 
 var (
@@ -1613,7 +1613,7 @@ func (ws *WithdrawalsReorgSpec) Execute(t *test.Env) {
 			}
 
 			// Error will be ignored here since the tx could have been already relayed
-			secondaryEngine.SendTransactions(t.TestContext, txs)
+			secondaryEngine.SendTransactions(t.TestContext, txs...)
 
 			if t.CLMock.CurrentPayloadNumber >= ws.GetSidechainSplitHeight() {
 				// Also request a payload from the sidechain
@@ -1916,14 +1916,19 @@ func (s *MaxInitcodeSizeSpec) Execute(t *test.Env) {
 				t.Fatalf("FAIL: Client did not include valid tx with MAX_INITCODE_SIZE")
 			}
 			// Customize the payload to include a tx with an invalid initcode
-			customPayload, err := helper.CustomizePayloadTransactions(&t.CLMock.LatestPayloadBuilt, types.Transactions{invalidTx})
-			if err != nil {
-				t.Fatalf("FAIL: Unable to customize payload: %v", err)
-			}
+			if invTx, ok := invalidTx.(*types.Transaction); ok {
 
-			r := t.TestEngine.TestEngineNewPayloadV2(customPayload)
-			r.ExpectStatus(test.Invalid)
-			r.ExpectLatestValidHash(&t.CLMock.LatestPayloadBuilt.ParentHash)
+				customPayload, err := helper.CustomizePayloadTransactions(&t.CLMock.LatestPayloadBuilt, types.Transactions{invTx})
+				if err != nil {
+					t.Fatalf("FAIL: Unable to customize payload: %v", err)
+				}
+
+				r := t.TestEngine.TestEngineNewPayloadV2(customPayload)
+				r.ExpectStatus(test.Invalid)
+				r.ExpectLatestValidHash(&t.CLMock.LatestPayloadBuilt.ParentHash)
+			} else {
+				t.Fatalf("FAIL: Unable to cast invalid tx to types.Transaction")
+			}
 		},
 	})
 }
@@ -1980,7 +1985,7 @@ func (req GetPayloadBodyRequestByRange) Verify(reqIndex int, testEngine *test.Te
 		for i := req.Start; i < req.Start+count; i++ {
 			p := payloadHistory[i]
 
-			r.ExpectPayloadBody(i-req.Start, &client_types.ExecutionPayloadBodyV1{
+			r.ExpectPayloadBody(i-req.Start, &e_typ.ExecutionPayloadBodyV1{
 				Transactions: p.Transactions,
 				Withdrawals:  p.Withdrawals,
 			})
@@ -2037,9 +2042,9 @@ func (req GetPayloadBodyRequestByHashIndex) Verify(reqIndex int, testEngine *tes
 	r := testEngine.TestEngineGetPayloadBodiesByHashV1(hashes)
 	r.ExpectPayloadBodiesCount(uint64(len(payloads)))
 	for i, p := range payloads {
-		var expectedPayloadBody *client_types.ExecutionPayloadBodyV1
+		var expectedPayloadBody *e_typ.ExecutionPayloadBodyV1
 		if p != nil {
-			expectedPayloadBody = &client_types.ExecutionPayloadBodyV1{
+			expectedPayloadBody = &e_typ.ExecutionPayloadBodyV1{
 				Transactions: p.Transactions,
 				Withdrawals:  p.Withdrawals,
 			}

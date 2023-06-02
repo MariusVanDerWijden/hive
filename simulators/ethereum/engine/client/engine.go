@@ -10,8 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	client_types "github.com/ethereum/hive/simulators/ethereum/engine/client/types"
+	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 )
 
 type Eth interface {
@@ -20,8 +19,8 @@ type Eth interface {
 	BlockNumber(ctx context.Context) (uint64, error)
 	BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
-	SendTransaction(ctx context.Context, tx *types.Transaction) error
-	SendTransactions(ctx context.Context, txs []*types.Transaction) []error
+	SendTransaction(ctx context.Context, tx e_typ.Transaction) error
+	SendTransactions(ctx context.Context, txs ...e_typ.Transaction) []error
 	StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error)
 	StorageAtKeys(ctx context.Context, account common.Address, keys []common.Hash, blockNumber *big.Int) (map[common.Hash]*common.Hash, error)
 	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
@@ -36,15 +35,15 @@ type Engine interface {
 
 	GetPayloadV1(ctx context.Context, payloadId *api.PayloadID) (api.ExecutableData, error)
 	GetPayloadV2(ctx context.Context, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, error)
-	GetPayloadV3(ctx context.Context, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, *api.BlobsBundle, error)
+	GetPayloadV3(ctx context.Context, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, *e_typ.BlobsBundle, error)
 
 	NewPayload(ctx context.Context, version int, payload interface{}, versionedHashes []common.Hash) (api.PayloadStatusV1, error)
-	NewPayloadV1(ctx context.Context, payload *client_types.ExecutableDataV1) (api.PayloadStatusV1, error)
+	NewPayloadV1(ctx context.Context, payload *e_typ.ExecutableDataV1) (api.PayloadStatusV1, error)
 	NewPayloadV2(ctx context.Context, payload *api.ExecutableData) (api.PayloadStatusV1, error)
 	NewPayloadV3(ctx context.Context, payload *api.ExecutableData, versionedHashes []common.Hash) (api.PayloadStatusV1, error)
 
-	GetPayloadBodiesByRangeV1(ctx context.Context, start uint64, count uint64) ([]*client_types.ExecutionPayloadBodyV1, error)
-	GetPayloadBodiesByHashV1(ctx context.Context, hashes []common.Hash) ([]*client_types.ExecutionPayloadBodyV1, error)
+	GetPayloadBodiesByRangeV1(ctx context.Context, start uint64, count uint64) ([]*e_typ.ExecutionPayloadBodyV1, error)
+	GetPayloadBodiesByHashV1(ctx context.Context, hashes []common.Hash) ([]*e_typ.ExecutionPayloadBodyV1, error)
 
 	LatestForkchoiceSent() (fcState *api.ForkchoiceStateV1, pAttributes *api.PayloadAttributes)
 	LatestNewPayloadSent() (payload *api.ExecutableData)

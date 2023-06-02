@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 )
 
 type SecondaryClientSpec struct {
@@ -1028,7 +1028,7 @@ func GenerateMergeTestSpec(mergeTestSpec MergeTestSpec) test.Spec {
 
 		// We are going to send PREVRANDAO transactions if the test requires so.
 		// These transactions might overwrite some of the PoW chain transactions if we re-org'd into a lower height chain.
-		prevRandaoTxs := make([]*types.Transaction, 0)
+		prevRandaoTxs := make([]e_typ.Transaction, 0)
 		prevRandaoFunc := func() {
 			if mergeTestSpec.PrevRandaoTransactions {
 				// Get the address nonce:

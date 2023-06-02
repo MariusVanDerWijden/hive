@@ -3,7 +3,6 @@ package helper
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/sha256"
 	"strings"
 	"sync"
 	"time"
@@ -21,11 +20,8 @@ import (
 
 	api "github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
-	"github.com/holiman/uint256"
-	"github.com/protolambda/ztyp/view"
 
 	gokzg4844 "github.com/crate-crypto/go-kzg-4844"
 	"github.com/ethereum/go-ethereum/common"
@@ -34,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/hive/hivesim"
+	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 )
 
 var kzg4844Context *gokzg4844.Context
@@ -103,7 +100,7 @@ const (
 	InvalidTransactionChainID     = "Transaction ChainID"
 )
 
-func TransactionInPayload(payload *api.ExecutableData, tx *types.Transaction) bool {
+func TransactionInPayload(payload *api.ExecutableData, tx e_typ.Transaction) bool {
 	for _, bytesTx := range payload.Transactions {
 		var currentTx types.Transaction
 		if err := currentTx.UnmarshalBinary(bytesTx); err == nil {
@@ -116,7 +113,7 @@ func TransactionInPayload(payload *api.ExecutableData, tx *types.Transaction) bo
 }
 
 // Use client specific rpc methods to debug a transaction that includes the PREVRANDAO opcode
-func DebugPrevRandaoTransaction(ctx context.Context, c *rpc.Client, clientType string, tx *types.Transaction, expectedPrevRandao *common.Hash) error {
+func DebugPrevRandaoTransaction(ctx context.Context, c *rpc.Client, clientType string, tx e_typ.Transaction, expectedPrevRandao *common.Hash) error {
 	switch clientType {
 	case "go-ethereum":
 		return gethDebugPrevRandaoTransaction(ctx, c, tx, expectedPrevRandao)
@@ -127,7 +124,7 @@ func DebugPrevRandaoTransaction(ctx context.Context, c *rpc.Client, clientType s
 	return nil
 }
 
-func gethDebugPrevRandaoTransaction(ctx context.Context, c *rpc.Client, tx *types.Transaction, expectedPrevRandao *common.Hash) error {
+func gethDebugPrevRandaoTransaction(ctx context.Context, c *rpc.Client, tx e_typ.Transaction, expectedPrevRandao *common.Hash) error {
 	type StructLogRes struct {
 		Pc      uint64             `json:"pc"`
 		Op      string             `json:"op"`
@@ -177,7 +174,7 @@ func gethDebugPrevRandaoTransaction(ctx context.Context, c *rpc.Client, tx *type
 	return nil
 }
 
-func nethermindDebugPrevRandaoTransaction(ctx context.Context, c *rpc.Client, tx *types.Transaction, expectedPrevRandao *common.Hash) error {
+func nethermindDebugPrevRandaoTransaction(ctx context.Context, c *rpc.Client, tx e_typ.Transaction, expectedPrevRandao *common.Hash) error {
 	var er *interface{}
 	if err := c.CallContext(ctx, &er, "trace_transaction", tx.Hash()); err != nil {
 		return err
@@ -347,7 +344,7 @@ const (
 )
 
 type TransactionCreator interface {
-	MakeTransaction(nonce uint64) (*types.Transaction, error)
+	MakeTransaction(nonce uint64) (e_typ.Transaction, error)
 	GetSourceAddress() common.Address
 }
 
@@ -367,7 +364,7 @@ func (tc *BaseTransactionCreator) GetSourceAddress() common.Address {
 	return crypto.PubkeyToAddress(tc.PrivateKey.PublicKey)
 }
 
-func (tc *BaseTransactionCreator) MakeTransaction(nonce uint64) (*types.Transaction, error) {
+func (tc *BaseTransactionCreator) MakeTransaction(nonce uint64) (e_typ.Transaction, error) {
 	var newTxData types.TxData
 
 	var txTypeToUse int
@@ -425,7 +422,7 @@ type BigContractTransactionCreator struct {
 	BaseTransactionCreator
 }
 
-func (tc *BigContractTransactionCreator) MakeTransaction(nonce uint64) (*types.Transaction, error) {
+func (tc *BigContractTransactionCreator) MakeTransaction(nonce uint64) (e_typ.Transaction, error) {
 	// Total GAS: Gtransaction == 21000, Gcreate == 32000, Gcodedeposit == 200
 	contractLength := uint64(0)
 	if tc.GasLimit > (21000 + 32000) {
@@ -458,7 +455,7 @@ type BigInitcodeTransactionCreator struct {
 	Initcode       []byte
 }
 
-func (tc *BigInitcodeTransactionCreator) MakeTransaction(nonce uint64) (*types.Transaction, error) {
+func (tc *BigInitcodeTransactionCreator) MakeTransaction(nonce uint64) (e_typ.Transaction, error) {
 	// This method caches the payload with the crafted initcode after first execution.
 	if tc.Payload == nil {
 		// Prepare initcode payload
@@ -484,267 +481,6 @@ func (tc *BigInitcodeTransactionCreator) MakeTransaction(nonce uint64) (*types.T
 	return tc.BaseTransactionCreator.MakeTransaction(nonce)
 }
 
-type BlobID uint64
-
-// Blob transaction creator
-type BlobTransactionCreator struct {
-	To         *common.Address
-	GasLimit   uint64
-	GasFee     *big.Int
-	GasTip     *big.Int
-	DataGasFee *big.Int
-	BlobID     BlobID
-	BlobCount  uint64
-	Value      *big.Int
-	Data       []byte
-	PrivateKey *ecdsa.PrivateKey
-}
-
-func GetKZGContext() (*gokzg4844.Context, error) {
-	if kzg4844Context == nil {
-		var err error
-		kzg4844Context, err = gokzg4844.NewContext4096Insecure1337()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return kzg4844Context, nil
-}
-
-func (blobId BlobID) VerifyBlob(blob *types.Blob) (bool, error) {
-	if blob == nil {
-		return false, errors.New("nil blob")
-	}
-	if blobId == 0 {
-		// Blob zero is empty blob
-		emptyFieldElem := [32]byte{}
-		for chunkIdx := 0; chunkIdx < params.FieldElementsPerBlob; chunkIdx++ {
-			if !bytes.Equal(blob[chunkIdx*32:(chunkIdx+1)*32], emptyFieldElem[:]) {
-				return false, nil
-			}
-		}
-		return true, nil
-	}
-
-	// Check the blob against the deterministic data
-	blobIdBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(blobIdBytes, uint64(blobId))
-
-	// First 32 bytes are the hash of the blob ID
-	currentHashed := sha256.Sum256(blobIdBytes)
-
-	for chunkIdx := 0; chunkIdx < params.FieldElementsPerBlob; chunkIdx++ {
-		var expectedFieldElem [32]byte
-		copy(expectedFieldElem[:], currentHashed[:])
-
-		// Check that no 32 bytes chunks are greater than the BLS modulus
-		for i := 0; i < 32; i++ {
-			blobByteIdx := 32 - i - 1
-			if expectedFieldElem[blobByteIdx] < gokzg4844.BlsModulus[i] {
-				// done with this field element
-				break
-			} else if expectedFieldElem[blobByteIdx] >= gokzg4844.BlsModulus[i] {
-				if gokzg4844.BlsModulus[i] > 0 {
-					// This chunk is greater than the modulus, and we can reduce it in this byte position
-					expectedFieldElem[blobByteIdx] = gokzg4844.BlsModulus[i] - 1
-					// done with this field element
-					break
-				} else {
-					// This chunk is greater than the modulus, but we can't reduce it in this byte position, so we will try in the next byte position
-					expectedFieldElem[blobByteIdx] = gokzg4844.BlsModulus[i]
-				}
-			}
-		}
-
-		if !bytes.Equal(blob[chunkIdx*32:(chunkIdx+1)*32], expectedFieldElem[:]) {
-			return false, nil
-		}
-
-		// Hash the current hash
-		currentHashed = sha256.Sum256(currentHashed[:])
-	}
-	return true, nil
-}
-
-func (blobId BlobID) FillBlob(blob *types.Blob) error {
-	if blob == nil {
-		return errors.New("nil blob")
-	}
-	if blobId == 0 {
-		// Blob zero is empty blob, so leave as is
-		return nil
-	}
-	// Fill the blob with deterministic data
-	blobIdBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(blobIdBytes, uint64(blobId))
-
-	// First 32 bytes are the hash of the blob ID
-	currentHashed := sha256.Sum256(blobIdBytes)
-
-	for chunkIdx := 0; chunkIdx < params.FieldElementsPerBlob; chunkIdx++ {
-		copy(blob[chunkIdx*32:(chunkIdx+1)*32], currentHashed[:])
-
-		// Check that no 32 bytes chunks are greater than the BLS modulus
-		for i := 0; i < 32; i++ {
-			blobByteIdx := ((chunkIdx + 1) * 32) - i - 1
-			if blob[blobByteIdx] < gokzg4844.BlsModulus[i] {
-				// go to next chunk
-				break
-			} else if blob[blobByteIdx] >= gokzg4844.BlsModulus[i] {
-				if gokzg4844.BlsModulus[i] > 0 {
-					// This chunk is greater than the modulus, and we can reduce it in this byte position
-					blob[blobByteIdx] = gokzg4844.BlsModulus[i] - 1
-					// go to next chunk
-					break
-				} else {
-					// This chunk is greater than the modulus, but we can't reduce it in this byte position, so we will try in the next byte position
-					blob[blobByteIdx] = gokzg4844.BlsModulus[i]
-				}
-			}
-		}
-
-		// Hash the current hash
-		currentHashed = sha256.Sum256(currentHashed[:])
-	}
-
-	return nil
-}
-
-func (blobId BlobID) GenerateBlob() (*types.Blob, *types.KZGCommitment, error) {
-	blob := types.Blob{}
-	if err := blobId.FillBlob(&blob); err != nil {
-		return nil, nil, err
-	}
-	ctx_4844, err := GetKZGContext()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	kzgCommitment, err := ctx_4844.BlobToKZGCommitment(gokzg4844.Blob(blob))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	typesKzgCommitment := types.KZGCommitment(kzgCommitment)
-
-	return &blob, &typesKzgCommitment, nil
-}
-
-func (blobId BlobID) GetVersionedHash(commitmentVersion byte) (common.Hash, error) {
-	_, kzgCommitment, err := blobId.GenerateBlob()
-	if err != nil {
-		return common.Hash{}, err
-	}
-	if kzgCommitment == nil {
-		return common.Hash{}, errors.New("nil kzgCommitment")
-	}
-	sha256Hash := sha256.Sum256((*kzgCommitment)[:])
-	versionedHash := common.BytesToHash(append([]byte{commitmentVersion}, sha256Hash[1:]...))
-	return versionedHash, nil
-}
-
-func BlobDataGenerator(startBlobId BlobID, blobCount uint64) ([]common.Hash, *types.BlobTxWrapData, error) {
-	blobData := types.BlobTxWrapData{
-		Blobs:    make(types.Blobs, blobCount),
-		BlobKzgs: make([]types.KZGCommitment, blobCount),
-	}
-	for i := uint64(0); i < blobCount; i++ {
-		if blob, kzgCommitment, err := (startBlobId + BlobID(i)).GenerateBlob(); err != nil {
-			return nil, nil, err
-		} else {
-			blobData.Blobs[i] = *blob
-			blobData.BlobKzgs[i] = *kzgCommitment
-		}
-	}
-
-	var hashes []common.Hash
-	for i := 0; i < len(blobData.BlobKzgs); i++ {
-		hashes = append(hashes, blobData.BlobKzgs[i].ComputeVersionedHash())
-	}
-	_, _, proofs, err := blobData.Blobs.ComputeCommitmentsAndProofs()
-	if err != nil {
-		return nil, nil, err
-	}
-	blobData.Proofs = proofs
-	return hashes, &blobData, nil
-}
-
-func (tc *BlobTransactionCreator) GetSourceAddress() common.Address {
-	if tc.PrivateKey == nil {
-		return globals.VaultAccountAddress
-	}
-	return crypto.PubkeyToAddress(tc.PrivateKey.PublicKey)
-}
-
-func (tc *BlobTransactionCreator) MakeTransaction(nonce uint64) (*types.Transaction, error) {
-	// Need tx wrap data that will pass blob verification
-	hashes, blobData, err := BlobDataGenerator(tc.BlobID, tc.BlobCount)
-	if err != nil {
-		return nil, err
-	}
-
-	var address *types.AddressSSZ
-	if tc.To != nil {
-		to_ssz := types.AddressSSZ(*tc.To)
-		address = &to_ssz
-	}
-	var data types.TxDataView
-	if tc.Data != nil {
-		data = types.TxDataView(tc.Data)
-	}
-
-	// Gas Tip
-	gasTip := tc.GasTip
-	if gasTip == nil {
-		gasTip = globals.GasTipPrice
-	}
-	gasTipUint256, _ := uint256.FromBig(gasTip)
-
-	// Gas Fee
-	gasFee := tc.GasFee
-	if gasFee == nil {
-		gasFee = globals.GasPrice
-	}
-	gasFeeUint256, _ := uint256.FromBig(gasFee)
-
-	// Data Gas Fee
-	dataGasFee := tc.DataGasFee
-	if dataGasFee == nil {
-		dataGasFee = big.NewInt(1)
-	}
-	dataGasFeeUint256, _ := uint256.FromBig(dataGasFee)
-
-	// Value
-	value := tc.Value
-	if value == nil {
-		value = big.NewInt(0)
-	}
-	valueUint256, _ := uint256.FromBig(value)
-
-	sbtx := &types.SignedBlobTx{
-		Message: types.BlobTxMessage{
-			Nonce:               view.Uint64View(nonce),
-			GasTipCap:           view.Uint256View(*gasTipUint256),
-			GasFeeCap:           view.Uint256View(*gasFeeUint256),
-			Gas:                 view.Uint64View(tc.GasLimit),
-			To:                  types.AddressOptionalSSZ{address},
-			Value:               view.Uint256View(*valueUint256),
-			Data:                data,
-			AccessList:          nil,
-			MaxFeePerDataGas:    view.Uint256View(*dataGasFeeUint256),
-			BlobVersionedHashes: hashes,
-		},
-	}
-	sbtx.Message.ChainID.SetFromBig(globals.ChainID)
-
-	key := tc.PrivateKey
-	if key == nil {
-		key = globals.VaultKey
-	}
-
-	return types.SignNewTx(key, types.NewDankSigner(globals.ChainID), sbtx, types.WithTxWrapData(blobData))
-}
-
 // Determines if the error we got from sending the raw tx is because the client
 // already knew the tx (might happen if we produced a re-org where the tx was
 // unwind back into the txpool)
@@ -753,7 +489,7 @@ func SentTxAlreadyKnown(err error) bool {
 		strings.Contains(err.Error(), "AlreadyKnown")
 }
 
-func SendNextTransaction(testCtx context.Context, node client.EngineClient, txCreator TransactionCreator) (*types.Transaction, error) {
+func SendNextTransaction(testCtx context.Context, node client.EngineClient, txCreator TransactionCreator) (e_typ.Transaction, error) {
 	nonce, err := node.GetNextAccountNonce(testCtx, txCreator.GetSourceAddress())
 	if err != nil {
 		return nil, err
@@ -779,13 +515,13 @@ func SendNextTransaction(testCtx context.Context, node client.EngineClient, txCr
 	}
 }
 
-func SendNextTransactions(testCtx context.Context, node client.EngineClient, txCreator TransactionCreator, txCount uint64) ([]*types.Transaction, error) {
+func SendNextTransactions(testCtx context.Context, node client.EngineClient, txCreator TransactionCreator, txCount uint64) ([]e_typ.Transaction, error) {
 	var err error
 	nonce, err := node.GetNextAccountNonce(testCtx, txCreator.GetSourceAddress())
 	if err != nil {
 		return nil, err
 	}
-	txs := make([]*types.Transaction, txCount)
+	txs := make([]e_typ.Transaction, txCount)
 	for i := range txs {
 		txs[i], err = txCreator.MakeTransaction(nonce)
 		if err != nil {
@@ -795,7 +531,7 @@ func SendNextTransactions(testCtx context.Context, node client.EngineClient, txC
 	}
 	ctx, cancel := context.WithTimeout(testCtx, globals.RPCTimeout)
 	defer cancel()
-	errs := node.SendTransactions(ctx, txs)
+	errs := node.SendTransactions(ctx, txs...)
 	for _, err := range errs {
 		if err != nil && !SentTxAlreadyKnown(err) {
 			return txs, err
@@ -805,7 +541,7 @@ func SendNextTransactions(testCtx context.Context, node client.EngineClient, txC
 	return txs, nil
 }
 
-func ReplaceLastTransaction(testCtx context.Context, node client.EngineClient, txCreator TransactionCreator) (*types.Transaction, error) {
+func ReplaceLastTransaction(testCtx context.Context, node client.EngineClient, txCreator TransactionCreator) (e_typ.Transaction, error) {
 	nonce, err := node.GetLastAccountNonce(testCtx, txCreator.GetSourceAddress())
 	if err != nil {
 		return nil, err

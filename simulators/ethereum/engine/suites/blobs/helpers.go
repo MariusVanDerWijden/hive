@@ -8,24 +8,24 @@ import (
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
+	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 )
 
 type TestBlobTxPool struct {
-	Transactions map[common.Hash]*types.Transaction
+	Transactions map[common.Hash]e_typ.Transaction
 }
 
-func (pool *TestBlobTxPool) AddBlobTransaction(tx *types.Transaction) {
+func (pool *TestBlobTxPool) AddBlobTransaction(tx e_typ.Transaction) {
 	if pool.Transactions == nil {
-		pool.Transactions = make(map[common.Hash]*types.Transaction)
+		pool.Transactions = make(map[common.Hash]e_typ.Transaction)
 	}
 	pool.Transactions[tx.Hash()] = tx
 }
 
 // Test two different transactions with the same blob, and check the blob bundle.
 
-func VerifyTransactionFromNode(ctx context.Context, eth client.Eth, tx *types.Transaction) error {
+func VerifyTransactionFromNode(ctx context.Context, eth client.Eth, tx e_typ.Transaction) error {
 	returnedTx, _, err := eth.TransactionByHash(ctx, tx.Hash())
 	if err != nil {
 		return err
@@ -56,20 +56,20 @@ func VerifyTransactionFromNode(ctx context.Context, eth client.Eth, tx *types.Tr
 	if returnedTx.ChainId().Cmp(tx.ChainId()) != 0 {
 		return fmt.Errorf("chain id mismatch: %d != %d", returnedTx.ChainId(), tx.ChainId())
 	}
-	if returnedTx.DataGas().Cmp(tx.DataGas()) != 0 {
-		return fmt.Errorf("data gas mismatch: %d != %d", returnedTx.DataGas(), tx.DataGas())
+	if returnedTx.BlobGas() != tx.BlobGas() {
+		return fmt.Errorf("data gas mismatch: %d != %d", returnedTx.BlobGas(), tx.BlobGas())
 	}
-	if returnedTx.GasFeeCapCmp(tx) != 0 {
+	if returnedTx.GasFeeCap().Cmp(tx.GasFeeCap()) != 0 {
 		return fmt.Errorf("max fee per gas mismatch: %d != %d", returnedTx.GasFeeCap(), tx.GasFeeCap())
 	}
-	if returnedTx.GasTipCapCmp(tx) != 0 {
+	if returnedTx.GasTipCap().Cmp(tx.GasTipCap()) != 0 {
 		return fmt.Errorf("max priority fee per gas mismatch: %d != %d", returnedTx.GasTipCap(), tx.GasTipCap())
 	}
-	if returnedTx.MaxFeePerDataGas().Cmp(tx.MaxFeePerDataGas()) != 0 {
-		return fmt.Errorf("max fee per data gas mismatch: %d != %d", returnedTx.MaxFeePerDataGas(), tx.MaxFeePerDataGas())
+	if returnedTx.BlobGasFeeCap().Cmp(tx.BlobGasFeeCap()) != 0 {
+		return fmt.Errorf("max fee per data gas mismatch: %d != %d", returnedTx.BlobGasFeeCap(), tx.BlobGasFeeCap())
 	}
-	if returnedTx.DataHashes() != nil && tx.DataHashes() != nil && !reflect.DeepEqual(returnedTx.DataHashes(), tx.DataHashes()) {
-		return fmt.Errorf("blob versioned hashes mismatch: %v != %v", returnedTx.DataHashes(), tx.DataHashes())
+	if returnedTx.BlobHashes() != nil && tx.BlobHashes() != nil && !reflect.DeepEqual(returnedTx.BlobHashes(), tx.BlobHashes()) {
+		return fmt.Errorf("blob versioned hashes mismatch: %v != %v", returnedTx.BlobHashes(), tx.BlobHashes())
 	}
 	if returnedTx.Type() != tx.Type() {
 		return fmt.Errorf("type mismatch: %d != %d", returnedTx.Type(), tx.Type())

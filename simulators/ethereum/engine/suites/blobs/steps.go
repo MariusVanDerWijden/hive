@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
+	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 )
 
 type BlobTestContext struct {
@@ -167,21 +168,21 @@ func (step NewPayloads) GetPayloadCount() uint64 {
 
 type BlobWrapData struct {
 	VersionedHash common.Hash
-	KZG           types.KZGCommitment
-	Blob          types.Blob
-	Proof         types.KZGProof
+	KZG           e_typ.KZGCommitment
+	Blob          e_typ.Blob
+	Proof         e_typ.KZGProof
 }
 
 func GetBlobDataInPayload(pool *TestBlobTxPool, payload *engine.ExecutableData) ([]*BlobWrapData, error) {
 	// Find all blob transactions included in the payload
 	var blobDataInPayload = make([]*BlobWrapData, 0)
-	signer := types.NewDankSigner(globals.ChainID)
+	signer := types.NewCancunSigner(globals.ChainID)
 
 	for i, binaryTx := range payload.Transactions {
 		// Unmarshal the tx from the payload, which should be the minimal version
 		// of the blob transaction
 		txData := new(types.Transaction)
-		if err := txData.UnmarshalMinimal(binaryTx); err != nil {
+		if err := txData.UnmarshalBinary(binaryTx); err != nil {
 			return nil, err
 		}
 
@@ -198,18 +199,32 @@ func GetBlobDataInPayload(pool *TestBlobTxPool, payload *engine.ExecutableData) 
 
 		// Find the transaction in the current pool of known transactions
 		if tx, ok := pool.Transactions[txData.Hash()]; ok {
-			versionedHashes, kzgs, blobs, proofs := tx.BlobWrapData()
-			if len(versionedHashes) != len(kzgs) || len(kzgs) != len(blobs) || len(blobs) != len(proofs) {
-				return nil, fmt.Errorf("invalid blob wrap data")
+			if blobTx, ok := tx.(*e_typ.TransactionWithBlobData); ok {
+				if blobTx.BlobData == nil {
+					return nil, fmt.Errorf("blob data is nil")
+				}
+				var (
+					kzgs            = blobTx.BlobData.Commitments
+					blobs           = blobTx.BlobData.Blobs
+					proofs          = blobTx.BlobData.Proofs
+					versionedHashes = blobTx.BlobHashes()
+				)
+
+				if len(versionedHashes) != len(kzgs) || len(kzgs) != len(blobs) || len(blobs) != len(proofs) {
+					return nil, fmt.Errorf("invalid blob wrap data")
+				}
+				for i := 0; i < len(versionedHashes); i++ {
+					blobDataInPayload = append(blobDataInPayload, &BlobWrapData{
+						VersionedHash: versionedHashes[i],
+						KZG:           kzgs[i],
+						Blob:          blobs[i],
+						Proof:         proofs[i],
+					})
+				}
+			} else {
+				return nil, fmt.Errorf("could not find blob data in transaction %s, type=%T", txData.Hash().String(), tx)
 			}
-			for i := 0; i < len(versionedHashes); i++ {
-				blobDataInPayload = append(blobDataInPayload, &BlobWrapData{
-					VersionedHash: versionedHashes[i],
-					KZG:           kzgs[i],
-					Blob:          blobs[i],
-					Proof:         proofs[i],
-				})
-			}
+
 		} else {
 			return nil, fmt.Errorf("could not find transaction %s in the pool", txData.Hash().String())
 		}
@@ -217,7 +232,7 @@ func GetBlobDataInPayload(pool *TestBlobTxPool, payload *engine.ExecutableData) 
 	return blobDataInPayload, nil
 }
 
-func (step NewPayloads) VerifyBlobBundle(pool *TestBlobTxPool, payload *engine.ExecutableData, blobBundle *engine.BlobsBundle) error {
+func (step NewPayloads) VerifyBlobBundle(pool *TestBlobTxPool, payload *engine.ExecutableData, blobBundle *e_typ.BlobsBundle) error {
 	blobDataInPayload, err := GetBlobDataInPayload(pool, payload)
 	if err != nil {
 		return err
@@ -382,7 +397,7 @@ func (step SendBlobTransactions) Execute(t *BlobTestContext) error {
 			blobTxCreator.PrivateKey = key
 		}
 		var (
-			blobTx *types.Transaction
+			blobTx e_typ.Transaction
 			err    error
 		)
 		if step.ReplaceTransactions {
