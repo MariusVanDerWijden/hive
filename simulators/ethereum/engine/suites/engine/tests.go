@@ -1255,7 +1255,8 @@ func invalidTerminalBlockNewPayload(t *test.Env) {
 		BlockHash:     common.Hash{},
 		Transactions:  [][]byte{},
 	}
-	hashedPayload, err := helper.CustomizePayload(&payload, &helper.CustomPayloadData{})
+	emptyCustomizer := helper.CustomPayloadData{}
+	hashedPayload, err := emptyCustomizer.CustomizePayload(&payload)
 	if err != nil {
 		t.Fatalf("FAIL (%s): Error while constructing PoW payload: %v", t.TestName, err)
 	}
@@ -1401,7 +1402,7 @@ func inconsistentForkchoiceStateGen(inconsistency string) func(t *test.Env) {
 				if len(alternativePayloads) > 0 {
 					customData.ParentHash = &alternativePayloads[len(alternativePayloads)-1].BlockHash
 				}
-				alternativePayload, err := helper.CustomizePayload(&t.CLMock.LatestPayloadBuilt, &customData)
+				alternativePayload, err := customData.CustomizePayload(&t.CLMock.LatestPayloadBuilt)
 				if err != nil {
 					t.Fatalf("FAIL (%s): Unable to construct alternative payload: %v", t.TestName, err)
 				}
@@ -1673,9 +1674,10 @@ func badHashOnNewPayloadGen(syncing bool, sidechain bool) func(*test.Env) {
 		t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{
 			// Run test after the new payload has been obtained
 			OnGetPayload: func() {
-				alteredPayload, err := helper.CustomizePayload(&t.CLMock.LatestPayloadBuilt, &helper.CustomPayloadData{
-					ParentHash: &invalidPayloadHash,
-				})
+				customizer := &helper.CustomPayloadData{
+					ParentHash: &alteredPayload.BlockHash,
+				}
+				alteredPayload, err := customizer.CustomizePayload(&t.CLMock.LatestPayloadBuilt)
 				if err != nil {
 					t.Fatalf("FAIL (%s): Unable to modify payload: %v", t.TestName, err)
 				}
@@ -1967,9 +1969,10 @@ func invalidPayloadTestCaseGen(payloadField helper.InvalidPayloadBlockField, syn
 		t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{
 			// Run test after the new payload has been obtained
 			OnGetPayload: func() {
-				followUpAlteredPayload, err := helper.CustomizePayload(&t.CLMock.LatestPayloadBuilt, &helper.CustomPayloadData{
+				customizer := &helper.CustomPayloadData{
 					ParentHash: &alteredPayload.BlockHash,
-				})
+				}
+				followUpAlteredPayload, err := customizer.CustomizePayload(&t.CLMock.LatestPayloadBuilt)
 				if err != nil {
 					t.Fatalf("FAIL (%s): Unable to modify payload: %v", t.TestName, err)
 				}
@@ -2049,10 +2052,11 @@ func invalidMissingAncestorReOrgGen(invalid_index int, payloadField helper.Inval
 					err         error
 				)
 				// Insert extraData to ensure we deviate from the main payload, which contains empty extradata
-				sidePayload, err = helper.CustomizePayload(&t.CLMock.LatestPayloadBuilt, &helper.CustomPayloadData{
+				customizer := &helper.CustomPayloadData{
 					ParentHash: &altChainPayloads[len(altChainPayloads)-1].BlockHash,
 					ExtraData:  &([]byte{0x01}),
-				})
+				}
+				sidePayload, err = customizer.CustomizePayload(&t.CLMock.LatestPayloadBuilt)
 				if err != nil {
 					t.Fatalf("FAIL (%s): Unable to customize payload: %v", t.TestName, err)
 				}
@@ -2262,10 +2266,11 @@ func (spec InvalidMissingAncestorReOrgSpec) GenerateSync() func(*test.Env) {
 				)
 				// Insert extraData to ensure we deviate from the main payload, which contains empty extradata
 				pHash := altChainPayloads[len(altChainPayloads)-1].Hash()
-				sidePayload, err = helper.CustomizePayload(&t.CLMock.LatestPayloadBuilt, &helper.CustomPayloadData{
+				customizer := &helper.CustomPayloadData{
 					ParentHash: &pHash,
 					ExtraData:  &([]byte{0x01}),
-				})
+				}
+				sidePayload, err = customizer.CustomizePayload(&t.CLMock.LatestPayloadBuilt)
 				if err != nil {
 					t.Fatalf("FAIL (%s): Unable to customize payload: %v", t.TestName, err)
 				}
@@ -2665,9 +2670,10 @@ func blockStatusReorg(t *test.Env) {
 			// Run using an alternative Payload, verify that the latest info is updated after re-org
 			customRandom := common.Hash{}
 			rand.Read(customRandom[:])
-			customizedPayload, err := helper.CustomizePayload(&t.CLMock.LatestPayloadBuilt, &helper.CustomPayloadData{
+			customizer := &helper.CustomPayloadData{
 				PrevRandao: &customRandom,
-			})
+			}
+			customizedPayload, err := customizer.CustomizePayload(&t.CLMock.LatestPayloadBuilt)
 			if err != nil {
 				t.Fatalf("FAIL (%s): Unable to customize payload: %v", t.TestName, err)
 			}
@@ -2753,7 +2759,7 @@ func reorgPrevValidatedPayloadOnSideChain(t *test.Env) {
 			if len(sidechainPayloads) > 0 {
 				customData.ParentHash = &sidechainPayloads[len(sidechainPayloads)-1].BlockHash
 			}
-			altPayload, err := helper.CustomizePayload(&t.CLMock.LatestPayloadBuilt, &customData)
+			altPayload, err := customData.CustomizePayload(&t.CLMock.LatestPayloadBuilt)
 			if err != nil {
 				t.Fatalf("FAIL (%s): Unable to customize payload: %v", t.TestName, err)
 			}
@@ -2814,11 +2820,11 @@ func safeReorgToSideChain(t *test.Env) {
 			if len(sidechainPayloads) > 0 {
 				altParentHash = sidechainPayloads[len(sidechainPayloads)-1].BlockHash
 			}
-			altPayload, err := helper.CustomizePayload(&t.CLMock.LatestPayloadBuilt,
-				&helper.CustomPayloadData{
-					ParentHash: &altParentHash,
-					ExtraData:  &([]byte{0x01}),
-				})
+			customizer := &helper.CustomPayloadData{
+				ParentHash: &altParentHash,
+				ExtraData:  &([]byte{0x01}),
+			}
+			altPayload, err := customizer.CustomizePayload(&t.CLMock.LatestPayloadBuilt)
 			if err != nil {
 				t.Fatalf("FAIL (%s): Unable to customize payload: %v", t.TestName, err)
 			}
@@ -2877,11 +2883,11 @@ func reorgBackFromSyncing(t *test.Env) {
 			if len(sidechainPayloads) > 0 {
 				altParentHash = sidechainPayloads[len(sidechainPayloads)-1].BlockHash
 			}
-			altPayload, err := helper.CustomizePayload(&t.CLMock.LatestPayloadBuilt,
-				&helper.CustomPayloadData{
-					ParentHash: &altParentHash,
-					ExtraData:  &([]byte{0x01}),
-				})
+			customizer := &helper.CustomPayloadData{
+				ParentHash: &altParentHash,
+				ExtraData:  &([]byte{0x01}),
+			}
+			altPayload, err := customizer.CustomizePayload(&t.CLMock.LatestPayloadBuilt)
 			if err != nil {
 				t.Fatalf("FAIL (%s): Unable to customize payload: %v", t.TestName, err)
 			}
@@ -3091,9 +3097,10 @@ func transactionReorgBlockhash(newNPOnRevert bool) func(t *test.Env) {
 
 					// Create side payload with different hash
 					var err error
-					sidePayload, err = helper.CustomizePayload(mainPayload, &helper.CustomPayloadData{
+					customizer := &helper.CustomPayloadData{
 						ExtraData: &([]byte{0x01}),
-					})
+					}
+					sidePayload, err = customizer.CustomizePayload(mainPayload)
 					if err != nil {
 						t.Fatalf("Error creating reorg payload %v", err)
 					}
@@ -3277,9 +3284,10 @@ func multipleNewCanonicalPayloads(t *test.Env) {
 			for i := 0; i < payloadCount; i++ {
 				newPrevRandao := common.Hash{}
 				rand.Read(newPrevRandao[:])
-				newPayload, err := helper.CustomizePayload(&basePayload, &helper.CustomPayloadData{
+				customizer := &helper.CustomPayloadData{
 					PrevRandao: &newPrevRandao,
-				})
+				}
+				newPayload, err := customizer.CustomizePayload(&basePayload)
 				if err != nil {
 					t.Fatalf("FAIL (%s): Unable to customize payload %v: %v", t.TestName, i, err)
 				}

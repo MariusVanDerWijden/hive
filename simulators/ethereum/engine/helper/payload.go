@@ -6,36 +6,46 @@ import (
 	"math/rand"
 	"strings"
 
+	api "github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	api "github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 )
 
-type CustomPayloadData struct {
-	ParentHash        *common.Hash
-	FeeRecipient      *common.Address
-	StateRoot         *common.Hash
-	ReceiptsRoot      *common.Hash
-	LogsBloom         *[]byte
-	PrevRandao        *common.Hash
-	Number            *uint64
-	GasLimit          *uint64
-	GasUsed           *uint64
-	Timestamp         *uint64
-	ExtraData         *[]byte
-	BaseFeePerGas     *big.Int
-	BlockHash         *common.Hash
-	Transactions      *[][]byte
-	Withdrawals       types.Withdrawals
-	RemoveWithdrawals bool
+type PayloadCustomizer interface {
+	CustomizePayload(basePayload *api.ExecutableData) (*api.ExecutableData, error)
 }
+
+type CustomPayloadData struct {
+	ParentHash          *common.Hash
+	FeeRecipient        *common.Address
+	StateRoot           *common.Hash
+	ReceiptsRoot        *common.Hash
+	LogsBloom           *[]byte
+	PrevRandao          *common.Hash
+	Number              *uint64
+	GasLimit            *uint64
+	GasUsed             *uint64
+	Timestamp           *uint64
+	ExtraData           *[]byte
+	BaseFeePerGas       *big.Int
+	BlockHash           *common.Hash
+	Transactions        *[][]byte
+	Withdrawals         types.Withdrawals
+	RemoveWithdrawals   bool
+	DataGasUsed         *uint64
+	RemoveDataGasUsed   bool
+	ExcessDataGas       *uint64
+	RemoveExcessDataGas bool
+}
+
+var _ PayloadCustomizer = (*CustomPayloadData)(nil)
 
 // Construct a customized payload by taking an existing payload as base and mixing it CustomPayloadData
 // BlockHash is calculated automatically.
-func CustomizePayload(basePayload *api.ExecutableData, customData *CustomPayloadData) (*api.ExecutableData, error) {
+func (customData *CustomPayloadData) CustomizePayload(basePayload *api.ExecutableData) (*api.ExecutableData, error) {
 	txs := basePayload.Transactions
 	if customData.Transactions != nil {
 		txs = *customData.Transactions
@@ -110,6 +120,20 @@ func CustomizePayload(basePayload *api.ExecutableData, customData *CustomPayload
 		h := types.DeriveSha(types.Withdrawals(basePayload.Withdrawals), trie.NewStackTrie(nil))
 		customPayloadHeader.WithdrawalsHash = &h
 	}
+	if customData.RemoveDataGasUsed {
+		customPayloadHeader.DataGasUsed = nil
+	} else if customData.DataGasUsed != nil {
+		customPayloadHeader.DataGasUsed = customData.DataGasUsed
+	} else if basePayload.DataGasUsed != nil {
+		customPayloadHeader.DataGasUsed = basePayload.DataGasUsed
+	}
+	if customData.RemoveExcessDataGas {
+		customPayloadHeader.ExcessDataGas = nil
+	} else if customData.ExcessDataGas != nil {
+		customPayloadHeader.ExcessDataGas = customData.ExcessDataGas
+	} else if basePayload.ExcessDataGas != nil {
+		customPayloadHeader.ExcessDataGas = basePayload.ExcessDataGas
+	}
 
 	// Return the new payload
 	result := &api.ExecutableData{
@@ -127,6 +151,8 @@ func CustomizePayload(basePayload *api.ExecutableData, customData *CustomPayload
 		BaseFeePerGas: customPayloadHeader.BaseFee,
 		BlockHash:     customPayloadHeader.Hash(),
 		Transactions:  txs,
+		DataGasUsed:   customPayloadHeader.DataGasUsed,
+		ExcessDataGas: customPayloadHeader.ExcessDataGas,
 	}
 	if customData.RemoveWithdrawals {
 		result.Withdrawals = nil
@@ -147,9 +173,9 @@ func CustomizePayloadTransactions(basePayload *api.ExecutableData, customTransac
 		}
 		byteTxs = append(byteTxs, bytes)
 	}
-	return CustomizePayload(basePayload, &CustomPayloadData{
+	return (&CustomPayloadData{
 		Transactions: &byteTxs,
-	})
+	}).CustomizePayload(basePayload)
 }
 
 func (customData *CustomPayloadData) String() string {
@@ -320,7 +346,7 @@ func GenerateInvalidPayload(basePayload *api.ExecutableData, payloadField Invali
 		return &copyPayload, nil
 	}
 
-	alteredPayload, err := CustomizePayload(basePayload, customPayloadMod)
+	alteredPayload, err := customPayloadMod.CustomizePayload(basePayload)
 	if err != nil {
 		return nil, err
 	}
