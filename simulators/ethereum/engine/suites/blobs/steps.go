@@ -116,6 +116,8 @@ type NewPayloads struct {
 	GetPayloadDelay uint64
 	// Extra modifications on NewPayload to the versioned hashes
 	VersionedHashes *VersionedHashes
+	// Extra modifications on NewPayload to potentially generate an invalid payload
+	PayloadCustomizer helper.PayloadCustomizer
 }
 
 type VersionedHashes struct {
@@ -321,6 +323,15 @@ func (step NewPayloads) Execute(t *BlobTestContext) error {
 					r := t.TestEngine.TestEngineNewPayloadV3(&t.CLMock.LatestPayloadBuilt, versionedHashes)
 					// All tests that modify the versioned hashes expect an
 					// `INVALID` response, even if the client is out of sync
+					r.ExpectStatus(test.Invalid)
+				}
+				if step.PayloadCustomizer != nil {
+					// Send a custom new payload
+					customPayload, err := step.PayloadCustomizer.CustomizePayload(&t.CLMock.LatestPayloadBuilt)
+					if err != nil {
+						t.Fatalf("FAIL: Error customizing payload (payload %d/%d): %v", p+1, payloadCount, err)
+					}
+					r := t.TestEngine.TestEngineNewPayloadV3(customPayload, nil)
 					r.ExpectStatus(test.Invalid)
 				}
 			},

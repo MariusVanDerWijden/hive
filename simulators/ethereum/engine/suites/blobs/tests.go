@@ -27,7 +27,13 @@ var (
 	DATA_GAS_COST_INCREMENT_EXCEED_BLOBS = uint64(12)
 	// Fork specific constants
 	BLOB_COMMITMENT_VERSION_KZG = byte(0x01)
+
+	DATA_GAS_PER_BLOB = uint64(0x20000)
 )
+
+func pUint64(v uint64) *uint64 {
+	return &v
+}
 
 // Execution specification reference:
 // https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md
@@ -803,6 +809,42 @@ var Tests = []test.SpecInterface{
 					Blobs: []helper.BlobID{0, 1},
 				},
 				ExpectedStatus: test.Invalid,
+			},
+		},
+	},
+
+	// DataGasUsed, ExcessDataGas Negative Tests
+	&BlobsBaseSpec{
+
+		Spec: test.Spec{
+			Name: "Incorrect DataGasUsed: Non-Zero on Zero Blobs",
+			About: `
+			Send a payload with zero blobs, but non-zero DataGasUsed.
+			`,
+		},
+		BlobTestSequence: BlobTestSequence{
+			NewPayloads{
+				ExpectedIncludedBlobCount: 0,
+				PayloadCustomizer: &helper.CustomPayloadData{
+					DataGasUsed: pUint64(1),
+				},
+			},
+		},
+	},
+	&BlobsBaseSpec{
+
+		Spec: test.Spec{
+			Name: "Incorrect DataGasUsed: DATA_GAS_PER_BLOB on Zero Blobs",
+			About: `
+			Send a payload with zero blobs, but non-zero DataGasUsed.
+			`,
+		},
+		BlobTestSequence: BlobTestSequence{
+			NewPayloads{
+				ExpectedIncludedBlobCount: 0,
+				PayloadCustomizer: &helper.CustomPayloadData{
+					DataGasUsed: pUint64(DATA_GAS_PER_BLOB),
+				},
 			},
 		},
 	},
