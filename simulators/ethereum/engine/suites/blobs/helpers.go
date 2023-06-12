@@ -12,6 +12,42 @@ import (
 	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 )
 
+func FakeExponential(factor uint64, numerator uint64, denominator uint64) uint64 {
+	var (
+		i               = uint64(1)
+		output          = uint64(0)
+		numerator_accum = uint64(factor * denominator)
+	)
+
+	for numerator_accum > 0 {
+		output += numerator_accum
+		numerator_accum = (numerator_accum * numerator) / (denominator * i)
+		i += 1
+	}
+	return output / denominator
+}
+
+func GetDataGasPrice(excessDataGas uint64) uint64 {
+	return FakeExponential(MIN_DATA_GASPRICE, excessDataGas, DATA_GASPRICE_UPDATE_FRACTION)
+}
+
+func GetMinExcessDataGasForDataGasPrice(data_gas_price uint64) uint64 {
+	var (
+		current_excess_data_gas = uint64(0)
+		current_data_gas_price  = uint64(1)
+	)
+	for current_data_gas_price < data_gas_price {
+		current_excess_data_gas += DATA_GAS_PER_BLOB
+		current_data_gas_price = GetDataGasPrice(current_excess_data_gas)
+	}
+
+	return current_excess_data_gas
+}
+
+func GetMinExcessDataBlobsForDataGasPrice(data_gas_price uint64) uint64 {
+	return GetMinExcessDataGasForDataGasPrice(data_gas_price) / DATA_GAS_PER_BLOB
+}
+
 type TestBlobTxPool struct {
 	Transactions map[common.Hash]e_typ.Transaction
 }

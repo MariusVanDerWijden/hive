@@ -11,24 +11,27 @@ import (
 )
 
 var (
-	Head               *big.Int // Nil
-	Pending            = big.NewInt(-2)
-	Finalized          = big.NewInt(-3)
-	Safe               = big.NewInt(-4)
-	InvalidParamsError = -32602
-	MAX_INITCODE_SIZE  = 49152
-
 	DATAHASH_START_ADDRESS = big.NewInt(0x100)
 	DATAHASH_ADDRESS_COUNT = 1000
 
-	TARGET_BLOBS_PER_BLOCK = uint64(2)
-	MAX_BLOBS_PER_BLOCK    = uint64(4)
-
-	DATA_GAS_COST_INCREMENT_EXCEED_BLOBS = uint64(12)
 	// Fork specific constants
-	BLOB_COMMITMENT_VERSION_KZG = byte(0x01)
-
 	DATA_GAS_PER_BLOB = uint64(0x20000)
+
+	MIN_DATA_GASPRICE         = uint64(1)
+	MAX_DATA_GAS_PER_BLOCK    = uint64(786432)
+	TARGET_DATA_GAS_PER_BLOCK = uint64(393216)
+
+	TARGET_BLOBS_PER_BLOCK = uint64(TARGET_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB)
+	MAX_BLOBS_PER_BLOCK    = uint64(MAX_DATA_GAS_PER_BLOCK / DATA_GAS_PER_BLOB)
+
+	DATA_GASPRICE_UPDATE_FRACTION = uint64(3338477)
+
+	BLOB_COMMITMENT_VERSION_KZG = byte(0x01)
+)
+
+// Precalculate the first data gas cost increase
+var (
+	DATA_GAS_COST_INCREMENT_EXCEED_BLOBS = GetMinExcessDataBlobsForDataGasPrice(2)
 )
 
 func pUint64(v uint64) *uint64 {

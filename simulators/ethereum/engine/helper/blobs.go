@@ -265,11 +265,21 @@ func (tc *BlobTransactionCreator) MakeTransaction(nonce uint64) (e_typ.Transacti
 	// Chain ID
 	chainID := new(big.Int).Set(globals.ChainID)
 
+	gasFeeCap := tc.GasFee
+	if gasFeeCap == nil {
+		gasFeeCap = globals.GasPrice
+	}
+
+	gasTipCap := tc.GasTip
+	if gasTipCap == nil {
+		gasTipCap = globals.GasTipPrice
+	}
+
 	sbtx := &types.BlobTx{
 		ChainID:    chainID,
 		Nonce:      nonce,
-		GasTipCap:  tc.GasTip,
-		GasFeeCap:  tc.GasFee,
+		GasTipCap:  gasTipCap,
+		GasFeeCap:  gasFeeCap,
 		Gas:        tc.GasLimit,
 		To:         address,
 		Value:      tc.Value,
