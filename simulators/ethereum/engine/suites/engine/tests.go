@@ -2213,7 +2213,7 @@ func (spec InvalidMissingAncestorReOrgSpec) GenerateSync() func(*test.Env) {
 			cA = b
 		} else {
 			t.CLMock.ProduceBlocks(int(cAHeight.Int64()), clmock.BlockProcessCallbacks{})
-			cA, err = api.ExecutableDataToBlock(t.CLMock.LatestPayloadBuilt)
+			cA, err = api.ExecutableDataToBlock(t.CLMock.LatestPayloadBuilt, nil)
 			if err != nil {
 				t.Fatalf("FAIL (%s): Error converting payload to block: %v", t.TestName, err)
 			}
@@ -2281,7 +2281,7 @@ func (spec InvalidMissingAncestorReOrgSpec) GenerateSync() func(*test.Env) {
 					}
 				}
 
-				sideBlock, err := api.ExecutableDataToBlock(*sidePayload)
+				sideBlock, err := api.ExecutableDataToBlock(*sidePayload, nil)
 				if err != nil {
 					t.Fatalf("FAIL (%s): Error converting payload to block: %v", t.TestName, err)
 				}
@@ -2290,7 +2290,7 @@ func (spec InvalidMissingAncestorReOrgSpec) GenerateSync() func(*test.Env) {
 					if spec.PayloadField == helper.InvalidOmmers {
 						if unclePayload, ok := t.CLMock.ExecutedPayloadHistory[sideBlock.NumberU64()-1]; ok && unclePayload != nil {
 							// Uncle is a PoS payload
-							uncle, err = api.ExecutableDataToBlock(*unclePayload)
+							uncle, err = api.ExecutableDataToBlock(*unclePayload, nil)
 							if err != nil {
 								t.Fatalf("FAIL (%s): Unable to get uncle block: %v", t.TestName, err)
 							}

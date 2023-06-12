@@ -64,8 +64,8 @@ var Tests = []test.SpecInterface{
 			// are included in the payload.
 			// We also verify that the blob transactions are included in the blobs bundle.
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 			},
 
 			// Try to increase the data gas cost of the blob transactions
@@ -76,7 +76,7 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 
-			// Next payloads will have 4 data blobs each
+			// Next payloads will have max data blobs each
 			NewPayloads{
 				PayloadCount:              DATA_GAS_COST_INCREMENT_EXCEED_BLOBS / (MAX_BLOBS_PER_BLOCK - TARGET_BLOBS_PER_BLOCK),
 				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK,

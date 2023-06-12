@@ -740,7 +740,7 @@ func (n *GethNode) NewPayloadV2(ctx context.Context, pl *beacon.ExecutableData) 
 
 func (n *GethNode) NewPayloadV3(ctx context.Context, pl *beacon.ExecutableData, versionedHashes []common.Hash) (beacon.PayloadStatusV1, error) {
 	n.latestPayloadSent = pl
-	resp, err := n.api.NewPayloadV3(*pl)
+	resp, err := n.api.NewPayloadV3(*pl, versionedHashes)
 	n.latestPayloadStatusReponse = &resp
 	return resp, err
 }

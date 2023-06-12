@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/holiman/uint256"
 )
 
 // Transaction interface
@@ -119,34 +118,26 @@ func (tx *TransactionWithBlobData) MarshalBinary() ([]byte, error) {
 		Proofs      []KZGProof
 	}
 
-	chainId, _ := uint256.FromBig(tx.Tx.ChainId())
-	gasTipCap, _ := uint256.FromBig(tx.Tx.GasTipCap())
-	gasFeeCap, _ := uint256.FromBig(tx.Tx.GasFeeCap())
 	pTo := tx.Tx.To()
 	if pTo == nil {
 		return nil, fmt.Errorf("to address is nil")
 	}
 	to := *pTo
-	value, _ := uint256.FromBig(tx.Tx.Value())
-	blobFeeCap, _ := uint256.FromBig(tx.Tx.BlobGasFeeCap())
 
-	vBig, rBig, sBig := tx.Tx.RawSignatureValues()
-	v, _ := uint256.FromBig(vBig)
-	r, _ := uint256.FromBig(rBig)
-	s, _ := uint256.FromBig(sBig)
+	v, r, s := tx.Tx.RawSignatureValues()
 
 	marshalBlobTx := MarshalType{
 		TxPayload: types.BlobTx{
-			ChainID:    chainId,
+			ChainID:    tx.Tx.ChainId(),
 			Nonce:      tx.Tx.Nonce(),
-			GasTipCap:  gasTipCap,
-			GasFeeCap:  gasFeeCap,
+			GasTipCap:  tx.Tx.GasTipCap(),
+			GasFeeCap:  tx.Tx.GasFeeCap(),
 			Gas:        tx.Tx.Gas(),
 			To:         to,
-			Value:      value,
+			Value:      tx.Tx.Value(),
 			Data:       tx.Tx.Data(),
 			AccessList: tx.Tx.AccessList(),
-			BlobFeeCap: blobFeeCap,
+			BlobFeeCap: tx.Tx.BlobGasFeeCap(),
 			BlobHashes: tx.Tx.BlobHashes(),
 
 			// Signature values

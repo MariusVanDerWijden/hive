@@ -44,6 +44,11 @@ func (bs *BlobsBaseSpec) GetGenesis() *core.Genesis {
 	genesis.Config.Clique = nil
 	genesis.ExtraData = []byte{}
 
+	if bs.BlobsForkHeight == 0 {
+		genesis.DataGasUsed = pUint64(0)
+		genesis.ExcessDataGas = pUint64(0)
+	}
+
 	// Add accounts that use the DATAHASH opcode
 	datahashCode := []byte{
 		0x5F, // PUSH0

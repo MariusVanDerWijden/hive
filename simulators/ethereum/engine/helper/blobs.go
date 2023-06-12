@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
-	"github.com/holiman/uint256"
 )
 
 var gCryptoCtx gokzg4844.Context
@@ -62,6 +61,16 @@ func VersionedHashesFromBlobBundle(bb *e_typ.BlobsBundle, commitmentVersion byte
 }
 
 type BlobID uint64
+
+type BlobIDs []BlobID
+
+func GetBlobList(startId BlobID, count uint64) BlobIDs {
+	blobList := make(BlobIDs, count)
+	for i := uint64(0); i < count; i++ {
+		blobList[i] = startId + BlobID(i)
+	}
+	return blobList
+}
 
 // Blob transaction creator
 type BlobTransactionCreator struct {
@@ -254,47 +263,19 @@ func (tc *BlobTransactionCreator) MakeTransaction(nonce uint64) (e_typ.Transacti
 	address := *tc.To
 
 	// Chain ID
-	chainID, _ := uint256.FromBig(globals.ChainID)
-
-	// Gas Tip
-	gasTip := tc.GasTip
-	if gasTip == nil {
-		gasTip = globals.GasTipPrice
-	}
-	gasTipUint256, _ := uint256.FromBig(gasTip)
-
-	// Gas Fee
-	gasFee := tc.GasFee
-	if gasFee == nil {
-		gasFee = globals.GasPrice
-	}
-	gasFeeUint256, _ := uint256.FromBig(gasFee)
-
-	// Data Gas Fee
-	dataGasFee := tc.DataGasFee
-	if dataGasFee == nil {
-		dataGasFee = big.NewInt(1)
-	}
-	dataGasFeeUint256, _ := uint256.FromBig(dataGasFee)
-
-	// Value
-	value := tc.Value
-	if value == nil {
-		value = big.NewInt(0)
-	}
-	valueUint256, _ := uint256.FromBig(value)
+	chainID := new(big.Int).Set(globals.ChainID)
 
 	sbtx := &types.BlobTx{
 		ChainID:    chainID,
 		Nonce:      nonce,
-		GasTipCap:  gasTipUint256,
-		GasFeeCap:  gasFeeUint256,
+		GasTipCap:  tc.GasTip,
+		GasFeeCap:  tc.GasFee,
 		Gas:        tc.GasLimit,
 		To:         address,
-		Value:      valueUint256,
+		Value:      tc.Value,
 		Data:       tc.Data,
 		AccessList: nil,
-		BlobFeeCap: dataGasFeeUint256,
+		BlobFeeCap: tc.DataGasFee,
 		BlobHashes: hashes,
 	}
 
