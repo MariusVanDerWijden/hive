@@ -873,6 +873,8 @@ var Tests = []test.SpecInterface{
 	},
 
 	// DataGasUsed, ExcessDataGas Negative Tests
+	// Most cases are contained in https://github.com/ethereum/execution-spec-tests/tree/main/tests/eips/eip4844
+	// and can be executed using `pyspec` simulator.
 	&BlobsBaseSpec{
 
 		Spec: test.Spec{
