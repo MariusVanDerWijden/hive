@@ -72,6 +72,27 @@ func GetBlobList(startId BlobID, count uint64) BlobIDs {
 	return blobList
 }
 
+func GetBlobListByIndex(startIndex BlobID, endIndex BlobID) BlobIDs {
+	count := uint64(0)
+	if endIndex > startIndex {
+		count = uint64(endIndex - startIndex + 1)
+	} else {
+		count = uint64(startIndex - endIndex + 1)
+	}
+	blobList := make(BlobIDs, count)
+	if endIndex > startIndex {
+		for i := uint64(0); i < count; i++ {
+			blobList[i] = startIndex + BlobID(i)
+		}
+	} else {
+		for i := uint64(0); i < count; i++ {
+			blobList[i] = endIndex - BlobID(i)
+		}
+	}
+
+	return blobList
+}
+
 // Blob transaction creator
 type BlobTransactionCreator struct {
 	To         *common.Address

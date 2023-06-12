@@ -126,7 +126,7 @@ var Tests = []test.SpecInterface{
 			},
 			// Then send the single-blob transactions
 			SendBlobTransactions{
-				BlobTransactionSendCount:      5,
+				BlobTransactionSendCount:      MAX_BLOBS_PER_BLOCK + 1,
 				BlobsPerTransaction:           1,
 				BlobTransactionMaxDataGasCost: big.NewInt(100),
 			},
@@ -140,6 +140,62 @@ var Tests = []test.SpecInterface{
 			// The rest of the payloads have full blobs
 			NewPayloads{
 				PayloadCount:              2,
+				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK,
+			},
+		},
+	},
+	&BlobsBaseSpec{
+
+		Spec: test.Spec{
+			Name: "Blob Transaction Ordering, Single Account 2",
+			About: `
+			Send N blob transactions with MAX_BLOBS_PER_BLOCK-1 blobs each,
+			using account A.
+			Using same account, and an increased nonce from the previously sent
+			transactions, send a single 2-blob transaction, and send N blob
+			transactions with 1 blob each.
+			Verify that the payloads are created with the correct ordering:
+			 - The first payloads must include the first N blob transactions.
+			 - The last payloads must include the rest of the transactions.
+			All transactions have sufficient data gas price to be included any
+			of the payloads.
+			`,
+		},
+
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// First send the MAX_BLOBS_PER_BLOCK-1 blob transactions.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      5,
+				BlobsPerTransaction:           MAX_BLOBS_PER_BLOCK - 1,
+				BlobTransactionMaxDataGasCost: big.NewInt(100),
+			},
+
+			// Then send the dual-blob transaction
+			SendBlobTransactions{
+				BlobTransactionSendCount:      1,
+				BlobsPerTransaction:           2,
+				BlobTransactionMaxDataGasCost: big.NewInt(100),
+			},
+
+			// Then send the single-blob transactions
+			SendBlobTransactions{
+				BlobTransactionSendCount:      MAX_BLOBS_PER_BLOCK - 2,
+				BlobsPerTransaction:           1,
+				BlobTransactionMaxDataGasCost: big.NewInt(100),
+			},
+
+			// First five payloads have MAX_BLOBS_PER_BLOCK-1 blobs each
+			NewPayloads{
+				PayloadCount:              5,
+				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK - 1,
+			},
+
+			// The rest of the payloads have full blobs
+			NewPayloads{
+				PayloadCount:              1,
 				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK,
 			},
 		},
@@ -320,10 +376,10 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{0},
+					Blobs: helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK-1),
 				},
 			},
 		},
@@ -345,10 +401,10 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{0, 1, 2},
+					Blobs: helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK+1),
 				},
 			},
 		},
@@ -368,10 +424,10 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{1, 0},
+					Blobs: helper.GetBlobListByIndex(helper.BlobID(TARGET_BLOBS_PER_BLOCK-1), 0),
 				},
 			},
 		},
@@ -391,10 +447,10 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{0, 1, 1},
+					Blobs: append(helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK), helper.BlobID(TARGET_BLOBS_PER_BLOCK-1)),
 				},
 			},
 		},
@@ -405,7 +461,7 @@ var Tests = []test.SpecInterface{
 			Name: "NewPayloadV3 Versioned Hashes, Incorrect Hash",
 			About: `
 			Tests VersionedHashes in Engine API NewPayloadV3 where the array
-			has a blob that is repeated in the array.
+			has a blob hash that does not belong to any blob contained in the payload.
 			`,
 		},
 		BlobTestSequence: BlobTestSequence{
@@ -414,10 +470,10 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{0, 2},
+					Blobs: append(helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK-1), helper.BlobID(TARGET_BLOBS_PER_BLOCK)),
 				},
 			},
 		},
@@ -436,10 +492,10 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 				VersionedHashes: &VersionedHashes{
-					Blobs:        []helper.BlobID{0, 1},
+					Blobs:        helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 					HashVersions: []byte{BLOB_COMMITMENT_VERSION_KZG, BLOB_COMMITMENT_VERSION_KZG + 1},
 				},
 			},
@@ -460,8 +516,8 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 				VersionedHashes: &VersionedHashes{
 					Blobs: nil,
 				},
@@ -483,8 +539,8 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 				VersionedHashes: &VersionedHashes{
 					Blobs: []helper.BlobID{},
 				},
@@ -505,7 +561,7 @@ var Tests = []test.SpecInterface{
 				ExpectedIncludedBlobCount: 0,
 				ExpectedBlobs:             []helper.BlobID{},
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{0, 1},
+					Blobs: []helper.BlobID{0},
 				},
 			},
 		},
@@ -528,8 +584,8 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 			},
 
 			LaunchClients{
@@ -540,7 +596,7 @@ var Tests = []test.SpecInterface{
 			SendModifiedLatestPayload{
 				ClientID: 1,
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{0},
+					Blobs: helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK-1),
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -564,8 +620,8 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 			},
 
 			LaunchClients{
@@ -576,7 +632,7 @@ var Tests = []test.SpecInterface{
 			SendModifiedLatestPayload{
 				ClientID: 1,
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{0, 1, 2},
+					Blobs: helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK+1),
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -598,8 +654,8 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 			},
 			LaunchClients{
 				EngineStarter:            hive_rpc.HiveRPCEngineStarter{},
@@ -609,7 +665,7 @@ var Tests = []test.SpecInterface{
 			SendModifiedLatestPayload{
 				ClientID: 1,
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{1, 0},
+					Blobs: helper.GetBlobListByIndex(helper.BlobID(TARGET_BLOBS_PER_BLOCK-1), 0),
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -631,8 +687,8 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 			},
 
 			LaunchClients{
@@ -643,7 +699,7 @@ var Tests = []test.SpecInterface{
 			SendModifiedLatestPayload{
 				ClientID: 1,
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{0, 1, 1},
+					Blobs: append(helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK), helper.BlobID(TARGET_BLOBS_PER_BLOCK-1)),
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -665,8 +721,8 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 			},
 
 			LaunchClients{
@@ -677,7 +733,7 @@ var Tests = []test.SpecInterface{
 			SendModifiedLatestPayload{
 				ClientID: 1,
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{0, 2},
+					Blobs: append(helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK-1), helper.BlobID(TARGET_BLOBS_PER_BLOCK)),
 				},
 				ExpectedStatus: test.Invalid,
 			},
@@ -698,8 +754,8 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 			},
 
 			LaunchClients{
@@ -710,7 +766,7 @@ var Tests = []test.SpecInterface{
 			SendModifiedLatestPayload{
 				ClientID: 1,
 				VersionedHashes: &VersionedHashes{
-					Blobs:        []helper.BlobID{0, 1},
+					Blobs:        helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 					HashVersions: []byte{BLOB_COMMITMENT_VERSION_KZG, BLOB_COMMITMENT_VERSION_KZG + 1},
 				},
 				ExpectedStatus: test.Invalid,
@@ -733,8 +789,8 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 			},
 
 			LaunchClients{
@@ -767,8 +823,8 @@ var Tests = []test.SpecInterface{
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
 			},
 			NewPayloads{
-				ExpectedIncludedBlobCount: 2,
-				ExpectedBlobs:             []helper.BlobID{0, 1},
+				ExpectedIncludedBlobCount: TARGET_BLOBS_PER_BLOCK,
+				ExpectedBlobs:             helper.GetBlobList(0, TARGET_BLOBS_PER_BLOCK),
 			},
 
 			LaunchClients{
@@ -809,7 +865,7 @@ var Tests = []test.SpecInterface{
 			SendModifiedLatestPayload{
 				ClientID: 1,
 				VersionedHashes: &VersionedHashes{
-					Blobs: []helper.BlobID{0, 1},
+					Blobs: []helper.BlobID{0},
 				},
 				ExpectedStatus: test.Invalid,
 			},
