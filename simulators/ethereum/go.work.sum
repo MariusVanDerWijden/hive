@@ -447,8 +447,8 @@ github.com/mailru/easyjson v0.7.6/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJ
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/marioevz/go-ethereum v1.10.14-0.20230603000940-6143c5b797f9 h1:CPW12gQELkh30/ksAGDcnB6aN1A2R7toZ2M9VfjiPX4=
 github.com/marioevz/go-ethereum v1.10.14-0.20230603000940-6143c5b797f9/go.mod h1:GXnDoy6ShaCzPXPfMcof5rPnVDwuckBAlW8jgH1jdl4=
-github.com/marioevz/go-ethereum v1.10.14-0.20230603001731-58fefdcc84b0 h1:4k6yFDK0tMVyk04K/OjZu/Uw7sEqvDmoq4Cw0gFJ0so=
-github.com/marioevz/go-ethereum v1.10.14-0.20230603001731-58fefdcc84b0/go.mod h1:GXnDoy6ShaCzPXPfMcof5rPnVDwuckBAlW8jgH1jdl4=
+github.com/marioevz/go-ethereum v1.10.14-0.20230605190058-132cb9b60c34 h1:X/cQbEBkb4AHGGeb36P8KDtKS4cKMcLkehmTp88uYL4=
+github.com/marioevz/go-ethereum v1.10.14-0.20230605190058-132cb9b60c34/go.mod h1:GXnDoy6ShaCzPXPfMcof5rPnVDwuckBAlW8jgH1jdl4=
 github.com/marstr/guid v1.1.0/go.mod h1:74gB1z2wpxxInTG6yaqA7KrtM0NZ+RbrcqDvYHefzho=
 github.com/matryer/moq v0.0.0-20190312154309-6cfb0558e1bd/go.mod h1:9ELz6aaclSIGnZBoaSLZ3NAl1VTufbOrXBPvtcy6WiQ=
 github.com/matryer/moq v0.2.7/go.mod h1:kITsx543GOENm48TUAQyJ9+SAvFSr7iGQXPoth/VUBk=
