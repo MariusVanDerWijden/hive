@@ -239,11 +239,11 @@ func (step NewPayloads) VerifyBlobBundle(pool *TestBlobTxPool, payload *engine.E
 	if err != nil {
 		return err
 	}
+	if len(blobBundle.Blobs) != len(blobBundle.Commitments) || len(blobBundle.Blobs) != len(blobBundle.Proofs) {
+		return fmt.Errorf("unexpected length in blob bundle: %d blobs, %d proofs, %d commitments", len(blobBundle.Blobs), len(blobBundle.Proofs), len(blobBundle.Commitments))
+	}
 	if len(blobBundle.Blobs) != int(step.ExpectedIncludedBlobCount) {
 		return fmt.Errorf("expected %d blob, got %d", step.ExpectedIncludedBlobCount, len(blobBundle.Blobs))
-	}
-	if len(blobBundle.Commitments) != int(step.ExpectedIncludedBlobCount) {
-		return fmt.Errorf("expected %d KZG, got %d", step.ExpectedIncludedBlobCount, len(blobBundle.Commitments))
 	}
 
 	// Verify that the calculated amount of blobs in the payload matches the
