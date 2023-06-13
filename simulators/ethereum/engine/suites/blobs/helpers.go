@@ -12,7 +12,7 @@ import (
 	e_typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 )
 
-func FakeExponential(factor uint64, numerator uint64, denominator uint64) uint64 {
+func FakeExponential(factor, numerator, denominator uint64) uint64 {
 	var (
 		i               = uint64(1)
 		output          = uint64(0)
@@ -46,6 +46,14 @@ func GetMinExcessDataGasForDataGasPrice(data_gas_price uint64) uint64 {
 
 func GetMinExcessDataBlobsForDataGasPrice(data_gas_price uint64) uint64 {
 	return GetMinExcessDataGasForDataGasPrice(data_gas_price) / DATA_GAS_PER_BLOB
+}
+
+func CalcExcessDataGas(parentExcessDataGas, parentDataGasUsed uint64) uint64 {
+	if (parentExcessDataGas + parentDataGasUsed) < TARGET_DATA_GAS_PER_BLOCK {
+		return 0
+	} else {
+		return parentExcessDataGas + parentDataGasUsed - TARGET_DATA_GAS_PER_BLOCK
+	}
 }
 
 type TestBlobTxPool struct {
