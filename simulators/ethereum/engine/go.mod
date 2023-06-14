@@ -7,7 +7,6 @@ require (
 	github.com/ethereum/go-ethereum v1.11.4
 	github.com/ethereum/hive v0.0.0-20230313141339-8e3200bfc09e
 	github.com/golang-jwt/jwt/v4 v4.4.3
-	github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c
 	github.com/pkg/errors v0.9.1
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
 )
@@ -48,6 +47,7 @@ require (
 	github.com/graph-gophers/graphql-go v1.4.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.11 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
+	github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c // indirect
 	github.com/huin/goupnp v1.0.3 // indirect
 	github.com/influxdata/influxdb-client-go/v2 v2.12.1 // indirect
 	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c // indirect
@@ -95,4 +95,4 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/marioevz/go-ethereum v1.10.14-0.20230612150759-69f536f61b22
+replace github.com/ethereum/go-ethereum => github.com/marioevz/go-ethereum v1.10.14-0.20230614003945-ca2054da1293
