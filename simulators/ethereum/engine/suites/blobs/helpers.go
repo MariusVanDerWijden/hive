@@ -52,7 +52,7 @@ func CalcExcessDataGas(parentExcessDataGas, parentDataGasUsed uint64) uint64 {
 	if (parentExcessDataGas + parentDataGasUsed) < TARGET_DATA_GAS_PER_BLOCK {
 		return 0
 	} else {
-		return parentExcessDataGas + parentDataGasUsed - TARGET_DATA_GAS_PER_BLOCK
+		return (parentExcessDataGas + parentDataGasUsed) - TARGET_DATA_GAS_PER_BLOCK
 	}
 }
 

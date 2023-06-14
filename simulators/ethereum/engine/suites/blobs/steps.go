@@ -2,6 +2,7 @@ package suite_blobs
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/big"
 	"sync"
@@ -175,9 +176,12 @@ type BlobWrapData struct {
 	Proof         e_typ.KZGProof
 }
 
-func GetBlobDataInPayload(pool *TestBlobTxPool, payload *engine.ExecutableData) ([]*BlobWrapData, error) {
+func GetBlobDataInPayload(pool *TestBlobTxPool, payload *engine.ExecutableData) ([]*e_typ.TransactionWithBlobData, []*BlobWrapData, error) {
 	// Find all blob transactions included in the payload
-	var blobDataInPayload = make([]*BlobWrapData, 0)
+	var (
+		blobDataInPayload = make([]*BlobWrapData, 0)
+		blobTxsInPayload  = make([]*e_typ.TransactionWithBlobData, 0)
+	)
 	signer := types.NewCancunSigner(globals.ChainID)
 
 	for i, binaryTx := range payload.Transactions {
@@ -185,7 +189,7 @@ func GetBlobDataInPayload(pool *TestBlobTxPool, payload *engine.ExecutableData) 
 		// of the blob transaction
 		txData := new(types.Transaction)
 		if err := txData.UnmarshalBinary(binaryTx); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		if txData.Type() != types.BlobTxType {
@@ -195,7 +199,7 @@ func GetBlobDataInPayload(pool *TestBlobTxPool, payload *engine.ExecutableData) 
 		// Print transaction info
 		sender, err := signer.Sender(txData)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		fmt.Printf("Tx %d in the payload: From: %s, Nonce: %d\n", i, sender, txData.Nonce())
 
@@ -203,7 +207,7 @@ func GetBlobDataInPayload(pool *TestBlobTxPool, payload *engine.ExecutableData) 
 		if tx, ok := pool.Transactions[txData.Hash()]; ok {
 			if blobTx, ok := tx.(*e_typ.TransactionWithBlobData); ok {
 				if blobTx.BlobData == nil {
-					return nil, fmt.Errorf("blob data is nil")
+					return nil, nil, fmt.Errorf("blob data is nil")
 				}
 				var (
 					kzgs            = blobTx.BlobData.Commitments
@@ -213,7 +217,7 @@ func GetBlobDataInPayload(pool *TestBlobTxPool, payload *engine.ExecutableData) 
 				)
 
 				if len(versionedHashes) != len(kzgs) || len(kzgs) != len(blobs) || len(blobs) != len(proofs) {
-					return nil, fmt.Errorf("invalid blob wrap data")
+					return nil, nil, fmt.Errorf("invalid blob wrap data")
 				}
 				for i := 0; i < len(versionedHashes); i++ {
 					blobDataInPayload = append(blobDataInPayload, &BlobWrapData{
@@ -223,22 +227,78 @@ func GetBlobDataInPayload(pool *TestBlobTxPool, payload *engine.ExecutableData) 
 						Proof:         proofs[i],
 					})
 				}
+				blobTxsInPayload = append(blobTxsInPayload, blobTx)
 			} else {
-				return nil, fmt.Errorf("could not find blob data in transaction %s, type=%T", txData.Hash().String(), tx)
+				return nil, nil, fmt.Errorf("could not find blob data in transaction %s, type=%T", txData.Hash().String(), tx)
 			}
 
 		} else {
-			return nil, fmt.Errorf("could not find transaction %s in the pool", txData.Hash().String())
+			return nil, nil, fmt.Errorf("could not find transaction %s in the pool", txData.Hash().String())
 		}
 	}
-	return blobDataInPayload, nil
+	return blobTxsInPayload, blobDataInPayload, nil
 }
 
-func (step NewPayloads) VerifyBlobBundle(pool *TestBlobTxPool, payload *engine.ExecutableData, blobBundle *e_typ.BlobsBundle) error {
-	blobDataInPayload, err := GetBlobDataInPayload(pool, payload)
-	if err != nil {
-		return err
+func (step NewPayloads) VerifyPayload(ctx context.Context, testEngine *test.TestEngineClient, blobTxsInPayload []*e_typ.TransactionWithBlobData, payload *engine.ExecutableData, previousPayload *engine.ExecutableData) error {
+	var (
+		parentExcessDataGas = uint64(0)
+		parentDataGasUsed   = uint64(0)
+		isCancunYet         = true
+	)
+	if previousPayload != nil {
+		if previousPayload.ExcessDataGas != nil {
+			parentExcessDataGas = *previousPayload.ExcessDataGas
+		}
+		if previousPayload.DataGasUsed != nil {
+			parentDataGasUsed = *previousPayload.DataGasUsed
+		}
 	}
+	expectedExcessDataGas := CalcExcessDataGas(parentExcessDataGas, parentDataGasUsed)
+
+	// TODO: check whether the new payload should be in cancun or not
+	if isCancunYet {
+		if payload.ExcessDataGas == nil {
+			return fmt.Errorf("payload contains nil excessDataGas")
+		}
+		if payload.DataGasUsed == nil {
+			return fmt.Errorf("payload contains nil dataGasUsed")
+		}
+		if *payload.ExcessDataGas != expectedExcessDataGas {
+			return fmt.Errorf("payload contains incorrect excessDataGas: want 0x%x (parentExcessDataGas=0x%x, parentDataGasUsed=0x%x), have 0x%x", expectedExcessDataGas, parentExcessDataGas, parentDataGasUsed, *payload.ExcessDataGas)
+		}
+
+		totalBlobCount := uint64(0)
+		expectedDataGasPrice := GetDataGasPrice(expectedExcessDataGas)
+
+		for _, tx := range blobTxsInPayload {
+			blobCount := uint64(len(tx.BlobHashes()))
+			totalBlobCount += blobCount
+
+			// Retrieve receipt from client
+			r := testEngine.TestTransactionReceipt(tx.Hash())
+			expectedDataGasUsed := uint64(blobCount * DATA_GAS_PER_BLOB)
+			r.ExpectDataGasUsed(&expectedDataGasUsed)
+			r.ExpectDataGasPrice(&expectedDataGasPrice)
+		}
+
+		if totalBlobCount != step.ExpectedIncludedBlobCount {
+			return fmt.Errorf("expected %d blobs in transactions, got %d", step.ExpectedIncludedBlobCount, totalBlobCount)
+		}
+
+	} else {
+		if payload.ExcessDataGas != nil {
+			return fmt.Errorf("payload contains non-nil excessDataGas pre-fork")
+		}
+		if payload.DataGasUsed != nil {
+			return fmt.Errorf("payload contains non-nil dataGasUsed pre-fork")
+		}
+	}
+
+	return nil
+}
+
+func (step NewPayloads) VerifyBlobBundle(blobDataInPayload []*BlobWrapData, payload *engine.ExecutableData, blobBundle *e_typ.BlobsBundle) error {
+
 	if len(blobBundle.Blobs) != len(blobBundle.Commitments) || len(blobBundle.Blobs) != len(blobBundle.Proofs) {
 		return fmt.Errorf("unexpected length in blob bundle: %d blobs, %d proofs, %d commitments", len(blobBundle.Blobs), len(blobBundle.Proofs), len(blobBundle.Commitments))
 	}
@@ -298,6 +358,9 @@ func (step NewPayloads) Execute(t *BlobTestContext) error {
 		originalGetPayloadDelay = t.CLMock.PayloadProductionClientDelay
 		t.CLMock.PayloadProductionClientDelay = time.Duration(step.GetPayloadDelay) * time.Second
 	}
+	var (
+		previousPayload = t.CLMock.LatestPayloadBuilt
+	)
 	for p := uint64(0); p < payloadCount; p++ {
 		t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{
 			OnGetPayload: func() {
@@ -309,7 +372,12 @@ func (step NewPayloads) Execute(t *BlobTestContext) error {
 
 				payload := &t.CLMock.LatestPayloadBuilt
 
-				if err := step.VerifyBlobBundle(t.TestBlobTxPool, payload, blobBundle); err != nil {
+				_, blobDataInPayload, err := GetBlobDataInPayload(t.TestBlobTxPool, payload)
+				if err != nil {
+					t.Fatalf("FAIL: Error retrieving blob bundle (payload %d/%d): %v", p+1, payloadCount, err)
+				}
+
+				if err := step.VerifyBlobBundle(blobDataInPayload, payload, blobBundle); err != nil {
 					t.Fatalf("FAIL: Error verifying blob bundle (payload %d/%d): %v", p+1, payloadCount, err)
 				}
 			},
@@ -334,6 +402,19 @@ func (step NewPayloads) Execute(t *BlobTestContext) error {
 					r := t.TestEngine.TestEngineNewPayloadV3(customPayload, nil)
 					r.ExpectStatus(test.Invalid)
 				}
+			},
+			OnForkchoiceBroadcast: func() {
+				// Verify the transaction receipts on incorporated transactions
+				payload := &t.CLMock.LatestPayloadBuilt
+
+				blobTxsInPayload, _, err := GetBlobDataInPayload(t.TestBlobTxPool, payload)
+				if err != nil {
+					t.Fatalf("FAIL: Error retrieving blob bundle (payload %d/%d): %v", p+1, payloadCount, err)
+				}
+				if err := step.VerifyPayload(t.TimeoutContext, t.TestEngine, blobTxsInPayload, payload, &previousPayload); err != nil {
+					t.Fatalf("FAIL: Error verifying payload (payload %d/%d): %v", p+1, payloadCount, err)
+				}
+				previousPayload = t.CLMock.LatestPayloadBuilt
 			},
 		})
 		t.Logf("INFO: Correctly produced payload %d/%d", p+1, payloadCount)
