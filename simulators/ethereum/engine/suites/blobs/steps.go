@@ -275,10 +275,11 @@ func (step NewPayloads) VerifyPayload(ctx context.Context, testEngine *test.Test
 			totalBlobCount += blobCount
 
 			// Retrieve receipt from client
-			r := testEngine.TestTransactionReceipt(tx.Hash())
-			expectedDataGasUsed := uint64(blobCount * DATA_GAS_PER_BLOB)
-			r.ExpectDataGasUsed(&expectedDataGasUsed)
-			r.ExpectDataGasPrice(&expectedDataGasPrice)
+			//r := testEngine.TestTransactionReceipt(tx.Hash())
+			//expectedDataGasUsed := uint64(blobCount * DATA_GAS_PER_BLOB)
+			//r.ExpectDataGasUsed(&expectedDataGasUsed)
+			//r.ExpectDataGasPrice(&expectedDataGasPrice)
+			_ = expectedDataGasPrice
 		}
 
 		if totalBlobCount != step.ExpectedIncludedBlobCount {

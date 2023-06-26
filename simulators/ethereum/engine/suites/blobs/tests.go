@@ -285,7 +285,7 @@ var Tests = []test.SpecInterface{
 			SendBlobTransactions{
 				BlobTransactionSendCount:      5,
 				BlobsPerTransaction:           MAX_BLOBS_PER_BLOCK - 1,
-				BlobTransactionMaxDataGasCost: big.NewInt(100),
+				BlobTransactionMaxDataGasCost: big.NewInt(120),
 				AccountIndex:                  0,
 				ClientIndex:                   0,
 			},
@@ -332,21 +332,21 @@ var Tests = []test.SpecInterface{
 			},
 			SendBlobTransactions{ // Blob ID 1
 				BlobTransactionSendCount:      1,
-				BlobTransactionMaxDataGasCost: big.NewInt(1),
+				BlobTransactionMaxDataGasCost: big.NewInt(1e2),
 				BlobTransactionGasFeeCap:      big.NewInt(1e10),
 				BlobTransactionGasTipCap:      big.NewInt(1e10),
 				ReplaceTransactions:           true,
 			},
 			SendBlobTransactions{ // Blob ID 2
 				BlobTransactionSendCount:      1,
-				BlobTransactionMaxDataGasCost: big.NewInt(1),
+				BlobTransactionMaxDataGasCost: big.NewInt(1e3),
 				BlobTransactionGasFeeCap:      big.NewInt(1e11),
 				BlobTransactionGasTipCap:      big.NewInt(1e11),
 				ReplaceTransactions:           true,
 			},
 			SendBlobTransactions{ // Blob ID 3
 				BlobTransactionSendCount:      1,
-				BlobTransactionMaxDataGasCost: big.NewInt(1),
+				BlobTransactionMaxDataGasCost: big.NewInt(1e4),
 				BlobTransactionGasFeeCap:      big.NewInt(1e12),
 				BlobTransactionGasTipCap:      big.NewInt(1e12),
 				ReplaceTransactions:           true,
